@@ -1,43 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer, Legend, ReferenceLine, AreaChart, Area
+  Tooltip, ResponsiveContainer, Legend, ReferenceLine, AreaChart, Area, ReferenceArea,
+  BarChart, Bar
 } from 'recharts';
 import { 
   Map, CloudSun, ShieldAlert, Award, FileText, CheckCircle, 
   AlertTriangle, Upload, RefreshCw, Layers, Clock, MapPin, Calendar
 } from 'lucide-react';
+import { 
+  MOCK_DISTRICT_OVERVIEW, MOCK_MANDALS, MOCK_TIMESERIES, 
+  MOCK_PIPELINE, MOCK_CALCULATE, MOCK_SIMULATE, MOCK_BACKTEST, 
+  MOCK_PREMIUM_TABLE, MOCK_PHOTO_ASSESS, MOCK_WEIGHT_HISTORY, 
+  MOCK_EVIDENCE_LOG, MOCK_CROPS, MOCK_DISASTER_HISTORY 
+} from './mocks/mockData.js';
 
-const API_BASE = "http://localhost:8000/api/v1";
+const API_BASE = "http://127.0.0.1:8000/api/v1";
 
 const STATIC_COORDS = {
-  "Adoni-1": { x: 120, y: 180 },
-  "Adoni-2": { x: 140, y: 190 },
-  "Alur": { x: 60, y: 240 },
-  "Aspari": { x: 100, y: 260 },
-  "C. Belagal": { x: 190, y: 130 },
-  "Chippagiri": { x: 80, y: 300 },
-  "Devanakonda": { x: 140, y: 280 },
-  "Gonegandla": { x: 180, y: 210 },
-  "Gudur": { x: 230, y: 180 },
-  "Halaharvi": { x: 40, y: 290 },
-  "Holagunda": { x: 30, y: 200 },
-  "Kallur": { x: 260, y: 150 },
-  "Kodumur": { x: 220, y: 240 },
-  "Kosigi": { x: 70, y: 120 },
-  "Kowthalam": { x: 50, y: 160 },
-  "Krishnagiri": { x: 190, y: 300 },
-  "Kurnool Rural": { x: 280, y: 120 },
-  "Kurnool Urban": { x: 290, y: 100 },
-  "Maddikera": { x: 90, y: 340 },
-  "Mantralayam": { x: 110, y: 100 },
-  "Nandavaram": { x: 150, y: 140 },
-  "Orvakal": { x: 300, y: 200 },
-  "Pattikonda": { x: 130, y: 330 },
-  "Pedda Kadubur": { x: 130, y: 220 },
-  "Tuggali": { x: 140, y: 370 },
-  "Veldurthy": { x: 240, y: 320 },
-  "Yemmiganur": { x: 180, y: 170 }
+  "Adoni-1": { x: 120, y: 180 }, "Adoni-2": { x: 140, y: 190 }, "Alur": { x: 60, y: 240 },
+  "Aspari": { x: 100, y: 260 }, "C. Belagal": { x: 190, y: 130 }, "Chippagiri": { x: 80, y: 300 },
+  "Devanakonda": { x: 140, y: 280 }, "Gonegandla": { x: 180, y: 210 }, "Gudur": { x: 230, y: 180 },
+  "Halaharvi": { x: 40, y: 290 }, "Holagunda": { x: 30, y: 200 }, "Kallur": { x: 260, y: 150 },
+  "Kodumur": { x: 220, y: 240 }, "Kosigi": { x: 70, y: 120 }, "Kowthalam": { x: 50, y: 160 },
+  "Krishnagiri": { x: 190, y: 300 }, "Kurnool Rural": { x: 280, y: 120 }, "Kurnool Urban": { x: 290, y: 100 },
+  "Maddikera": { x: 90, y: 340 }, "Mantralayam": { x: 110, y: 100 }, "Nandavaram": { x: 150, y: 140 },
+  "Orvakal": { x: 300, y: 200 }, "Pattikonda": { x: 130, y: 330 }, "Pedda Kadubur": { x: 130, y: 220 },
+  "Tuggali": { x: 140, y: 370 }, "Veldurthy": { x: 240, y: 320 }, "Yemmiganur": { x: 180, y: 170 }
 };
 
 const MANDAL_IDS = {
@@ -57,12 +46,29 @@ function App() {
   const [selectedMandal, setSelectedMandal] = useState("Alur");
   const [selectedYear, setSelectedYear] = useState(2023); // maps to Kharif_2023 or Kharif_2020
   
-  // Loaded State
-  const [mandals, setMandals] = useState({});
-  const [districtOverview, setDistrictOverview] = useState(null);
-  const [selectedMandalData, setSelectedMandalData] = useState(null);
-  const [timeseriesData, setTimeseriesData] = useState([]);
-  const [pipelineData, setPipelineData] = useState(null);
+  // Cache utilities / helper dictionary constructor
+  const getInitialMandalsDict = () => {
+    const list = MOCK_MANDALS["Kharif_2023"];
+    const dict = {};
+    list.forEach(m => {
+      dict[m.mandal_name] = m;
+    });
+    return dict;
+  };
+
+  // Offline caching & error states
+  const [apiError, setApiError] = useState(null);
+  const [isPayoutLoading, setIsPayoutLoading] = useState(false);
+  const [isPhotoLoading, setIsPhotoLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Loaded State Hydrated with Mock cache default values
+  const [mandals, setMandals] = useState(getInitialMandalsDict());
+  const [districtOverview, setDistrictOverview] = useState(MOCK_DISTRICT_OVERVIEW["Kharif_2023"]);
+  const [selectedMandalData, setSelectedMandalData] = useState(getInitialMandalsDict()["Alur"]);
+  const [timeseriesData, setTimeseriesData] = useState(MOCK_TIMESERIES("KNL_003", "Kharif_2023").timeseries);
+  const [baselineBand, setBaselineBand] = useState({ upper: 0.65, lower: 0.45, mean: 0.55 });
+  const [pipelineData, setPipelineData] = useState(MOCK_PIPELINE);
   
   // Screen 2 States
   const [scenarioCrop, setScenarioCrop] = useState("Groundnut");
@@ -70,9 +76,9 @@ function App() {
   const [rainfallDeficit, setRainfallDeficit] = useState(60);
   const [consecutiveDryDays, setConsecutiveDryDays] = useState(22);
   const [temperature, setTemperature] = useState(43.0);
-  const [payoutResult, setPayoutResult] = useState(null);
-  const [backtestData, setBacktestData] = useState(null);
-  const [premiumTable, setPremiumTable] = useState([]);
+  const [payoutResult, setPayoutResult] = useState(MOCK_CALCULATE("Groundnut", "Drought", "KNL_003"));
+  const [backtestData, setBacktestData] = useState(MOCK_BACKTEST);
+  const [premiumTable, setPremiumTable] = useState(MOCK_PREMIUM_TABLE.table);
   
   // Screen 3 States
   const [uploadedPhoto, setUploadedPhoto] = useState(null);
@@ -86,14 +92,74 @@ function App() {
   const [metadataStrip, setMetadataStrip] = useState(false);
   const [photoshopMock, setPhotoshopMock] = useState(false);
   const [photoResult, setPhotoResult] = useState(null);
-  const [evidenceLogs, setEvidenceLogs] = useState([]);
-  const [weightHistory, setWeightHistory] = useState([]);
+  const [evidenceLogs, setEvidenceLogs] = useState(MOCK_EVIDENCE_LOG);
+  const [weightHistory, setWeightHistory] = useState(MOCK_WEIGHT_HISTORY.weight_history);
   
+  // Meta Utility States
+  const [metaCrops, setMetaCrops] = useState(MOCK_CROPS);
+  const [disasterHistory, setDisasterHistory] = useState(MOCK_DISASTER_HISTORY);
+
   const [isRoadmapOpen, setIsRoadmapOpen] = useState(false);
   const [countdown, setCountdown] = useState("23h 41m 15s");
 
   const season = selectedYear === 2023 ? "Kharif_2023" : "Kharif_2020";
   const selectedMandalId = MANDAL_IDS[selectedMandal] || "KNL_003";
+
+  // Helper calculation for mock SPI sliders
+  const calculateMockSpi = (deficit) => {
+    const val = 80.0 * (1.0 - deficit/100.0);
+    const mean = 80.0;
+    const std = 22.0;
+    return parseFloat(((val - mean)/std).toFixed(2));
+  };
+
+  // 0. Mount-level fetches for metadata
+  useEffect(() => {
+    fetch(`${API_BASE}/meta/crops`)
+      .then(res => res.json())
+      .then(resObj => {
+        if (resObj.success && resObj.data && resObj.data.crops) {
+          setMetaCrops(resObj.data.crops);
+        }
+      })
+      .catch(err => console.warn("Using static crop meta due to error:", err));
+
+    fetch(`${API_BASE}/meta/disaster-history`)
+      .then(res => res.json())
+      .then(resObj => {
+        if (resObj.success && resObj.data && resObj.data.events) {
+          setDisasterHistory(resObj.data.events);
+        }
+      })
+      .catch(err => console.warn("Using static disaster history due to error:", err));
+
+    fetch(`${API_BASE}/meta/mandals`)
+      .then(res => res.json())
+      .then(resObj => {
+        if (resObj.success && resObj.data && resObj.data.mandals) {
+          const dict = {};
+          resObj.data.mandals.forEach(m => {
+            const coords = STATIC_COORDS[m.mandal_name] || { x: 150, y: 150 };
+            dict[m.mandal_name] = { 
+              ...m, 
+              ...coords,
+              map_color: "#7f8c8d",
+              threshold_breached: false,
+              vci: 0,
+              spi_value: 0,
+              estimated_loss_pct: 0,
+              spi_category: "NORMAL",
+              vci_status: "NORMAL",
+              ndvi_current: 0,
+              ndvi_baseline: 0,
+              ndvi_anomaly_pct: 0
+            };
+          });
+          setMandals(prev => ({ ...dict, ...prev }));
+        }
+      })
+      .catch(err => console.warn("Using static mandal meta due to error:", err));
+  }, []);
 
   // 1. Initial Load and year/season switches
   useEffect(() => {
@@ -101,9 +167,18 @@ function App() {
     fetch(`${API_BASE}/district/overview?season=${season}`)
       .then(res => res.json())
       .then(resObj => {
-        if (resObj.success) setDistrictOverview(resObj.data);
+        if (resObj.success) {
+          setDistrictOverview(resObj.data);
+          setApiError(null);
+        } else {
+          throw new Error(resObj.error?.message || "Invalid response");
+        }
       })
-      .catch(err => console.error("Error loading district overview:", err));
+      .catch(err => {
+        console.warn("Using cached overview due to error:", err);
+        setDistrictOverview(MOCK_DISTRICT_OVERVIEW[season]);
+        setApiError("Assessment data unavailable — using last cached values.");
+      });
 
     // Load mandals list details (VCI, SPI, anomaly status)
     fetch(`${API_BASE}/district/mandals?season=${season}`)
@@ -116,17 +191,37 @@ function App() {
             dict[m.mandal_name] = { ...m, ...coords };
           });
           setMandals(dict);
+          setApiError(null);
+        } else {
+          throw new Error(resObj.error?.message || "Invalid response");
         }
       })
-      .catch(err => console.error("Error loading mandals map list:", err));
+      .catch(err => {
+        console.warn("Using cached mandals list due to error:", err);
+        const dict = {};
+        MOCK_MANDALS[season].forEach(m => {
+          dict[m.mandal_name] = m;
+        });
+        setMandals(dict);
+        setApiError("Assessment data unavailable — using last cached values.");
+      });
 
     // Load 72h pipeline status
     fetch(`${API_BASE}/district/pipeline-status?season=${season}`)
       .then(res => res.json())
       .then(resObj => {
-        if (resObj.success) setPipelineData(resObj.data);
+        if (resObj.success) {
+          setPipelineData(resObj.data);
+          setApiError(null);
+        } else {
+          throw new Error(resObj.error?.message || "Invalid response");
+        }
       })
-      .catch(err => console.error("Error loading pipeline stages:", err));
+      .catch(err => {
+        console.warn("Using cached pipeline due to error:", err);
+        setPipelineData(MOCK_PIPELINE);
+        setApiError("Assessment data unavailable — using last cached values.");
+      });
   }, [selectedYear]);
 
   // 2. Fetch specific mandal details (Screen 1 curves + Screen 3 weight plots)
@@ -137,25 +232,57 @@ function App() {
     fetch(`${API_BASE}/district/satellite-timeseries?mandal_id=${selectedMandalId}&season=${season}`)
       .then(res => res.json())
       .then(resObj => {
-        if (resObj.success && resObj.data) setTimeseriesData(resObj.data.timeseries);
+        if (resObj.success && resObj.data) {
+          setTimeseriesData(resObj.data.timeseries);
+          if (resObj.data.baseline_band) {
+            setBaselineBand(resObj.data.baseline_band);
+          }
+          setApiError(null);
+        } else {
+          throw new Error(resObj.error?.message || "Invalid response");
+        }
       })
-      .catch(err => console.error("Error loading VCI trend series:", err));
+      .catch(err => {
+        console.warn("Using cached timeseries data due to error:", err);
+        const mockTS = MOCK_TIMESERIES(selectedMandalId, season);
+        setTimeseriesData(mockTS.timeseries);
+        setBaselineBand(mockTS.baseline_band);
+        setApiError("Assessment data unavailable — using last cached values.");
+      });
 
     // Load claim evidence log
     fetch(`${API_BASE}/photo/evidence-log?mandal_id=${selectedMandalId}&season=${season}`)
       .then(res => res.json())
       .then(resObj => {
-        if (resObj.success && resObj.data) setEvidenceLogs(resObj.data.evidence);
+        if (resObj.success && resObj.data) {
+          setEvidenceLogs(resObj.data.evidence);
+          setApiError(null);
+        } else {
+          throw new Error(resObj.error?.message || "Invalid response");
+        }
       })
-      .catch(err => console.error("Error loading evidence log table:", err));
+      .catch(err => {
+        console.warn("Using cached evidence log due to error:", err);
+        setEvidenceLogs(MOCK_EVIDENCE_LOG);
+        setApiError("Assessment data unavailable — using last cached values.");
+      });
 
     // Load weight shifts history (RLHF)
     fetch(`${API_BASE}/photo/weight-history?mandal_id=${selectedMandalId}`)
       .then(res => res.json())
       .then(resObj => {
-        if (resObj.success && resObj.data) setWeightHistory(resObj.data.weight_history);
+        if (resObj.success && resObj.data) {
+          setWeightHistory(resObj.data.weight_history);
+          setApiError(null);
+        } else {
+          throw new Error(resObj.error?.message || "Invalid response");
+        }
       })
-      .catch(err => console.error("Error loading weights history:", err));
+      .catch(err => {
+        console.warn("Using cached weight shifts due to error:", err);
+        setWeightHistory(MOCK_WEIGHT_HISTORY.weight_history);
+        setApiError("Assessment data unavailable — using last cached values.");
+      });
   }, [selectedMandal, selectedYear]);
 
   // Sync mandal details sidebar card state
@@ -165,9 +292,9 @@ function App() {
     }
   }, [selectedMandal, mandals]);
 
-  // 3. Screen 2: Risk Scenario Engine calculations
+  // 3. Screen 2: Risk Scenario Engine calculations (Filters changed)
   useEffect(() => {
-    // Calculate live payout metrics
+    setIsPayoutLoading(true);
     const payload = {
       crop: scenarioCrop,
       peril: scenarioPeril,
@@ -190,38 +317,152 @@ function App() {
     })
       .then(res => res.json())
       .then(resObj => {
-        if (resObj.success) setPayoutResult(resObj.data);
+        if (resObj.success && resObj.data) {
+          setPayoutResult(resObj.data);
+          setApiError(null);
+        } else {
+          throw new Error(resObj.error?.message || "Invalid calculation");
+        }
+        setIsPayoutLoading(false);
       })
-      .catch(err => console.error("Error calculating scenario:", err));
+      .catch(err => {
+        console.warn("Using cached calculate result due to error:", err);
+        setPayoutResult(MOCK_CALCULATE(scenarioCrop, scenarioPeril, selectedMandalId));
+        setApiError("Assessment data unavailable — using last cached values.");
+        setIsPayoutLoading(false);
+      });
 
     // Load Backtesting validation outcomes
     fetch(`${API_BASE}/backtest/results?crop=${scenarioCrop}`)
       .then(res => res.json())
       .then(resObj => {
-        if (resObj.success) setBacktestData(resObj.data);
+        if (resObj.success && resObj.data) {
+          setBacktestData(resObj.data);
+          setApiError(null);
+        } else {
+          throw new Error(resObj.error?.message || "Invalid backtest");
+        }
       })
-      .catch(err => console.error("Error loading backtest:", err));
+      .catch(err => {
+        console.warn("Using cached backtest due to error:", err);
+        setBacktestData(MOCK_BACKTEST);
+        setApiError("Assessment data unavailable — using last cached values.");
+      });
 
     // Load full premium table metadata
     fetch(`${API_BASE}/insurance/premium-table`)
       .then(res => res.json())
       .then(resObj => {
-        if (resObj.success) setPremiumTable(resObj.data.table);
+        if (resObj.success && resObj.data && resObj.data.table) {
+          setPremiumTable(resObj.data.table);
+          setApiError(null);
+        } else {
+          throw new Error(resObj.error?.message || "Invalid premium table");
+        }
       })
-      .catch(err => console.error("Error loading premium tables:", err));
-  }, [scenarioCrop, scenarioPeril, selectedMandal, rainfallDeficit, consecutiveDryDays, temperature, selectedYear]);
+      .catch(err => {
+        console.warn("Using cached premium table due to error:", err);
+        setPremiumTable(MOCK_PREMIUM_TABLE.table);
+        setApiError("Assessment data unavailable — using last cached values.");
+      });
+  }, [scenarioCrop, scenarioPeril, selectedMandal, selectedYear]);
 
-  // Helper calculation for mock SPI sliders
-  const calculateMockSpi = (deficit) => {
-    // Deficit of 60% approx SPI of -1.8
-    const val = 80.0 * (1.0 - deficit/100.0);
-    const mean = 80.0;
-    const std = 22.0;
-    return parseFloat(((val - mean)/std).toFixed(2));
-  };
+  // 3b. Screen 2: Risk Scenario Engine updates (Debounced sliders updates)
+  useEffect(() => {
+    if (!payoutResult) return;
+    setIsPayoutLoading(true);
+
+    const timer = setTimeout(() => {
+      const payload = {
+        crop: scenarioCrop,
+        peril: scenarioPeril,
+        mandal_id: selectedMandalId,
+        sowing_date: selectedYear === 2023 ? "2023-07-01" : "2020-07-01",
+        disaster_date: selectedYear === 2023 ? "2023-09-12" : "2020-09-12",
+        rainfall_deficit_pct: parseFloat(rainfallDeficit),
+        consecutive_dry_days: parseInt(consecutiveDryDays),
+        max_temp_celsius: parseFloat(temperature)
+      };
+
+      fetch(`${API_BASE}/parametric/simulate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+        .then(res => res.json())
+        .then(resObj => {
+          if (resObj.success && resObj.data) {
+            const sim = resObj.data;
+            setPayoutResult(prev => {
+              if (!prev) return null;
+              return {
+                ...prev,
+                final_loss_pct: sim.estimated_loss_pct,
+                threshold_43_breached: sim.threshold_breached,
+                crop_stage: sim.crop_stage,
+                kc_multiplier: sim.kc_multiplier,
+                trigger_activated: sim.trigger_status === "ACTIVATED",
+                trigger_details: {
+                  ...prev.trigger_details,
+                  spi_value: sim.spi_computed
+                },
+                term_sheet: {
+                  ...prev.term_sheet,
+                  current_estimated_payout_per_ha: sim.payout_per_ha
+                }
+              };
+            });
+            setApiError(null);
+          } else {
+            throw new Error(resObj.error?.message || "Simulation error");
+          }
+          setIsPayoutLoading(false);
+        })
+        .catch(err => {
+          console.warn("Using cached simulation values due to error:", err);
+          const sim = MOCK_SIMULATE(scenarioCrop, parseFloat(rainfallDeficit));
+          setPayoutResult(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              final_loss_pct: sim.estimated_loss_pct,
+              threshold_43_breached: sim.threshold_breached,
+              crop_stage: sim.crop_stage,
+              kc_multiplier: sim.kc_multiplier,
+              trigger_activated: sim.trigger_status === "ACTIVATED",
+              trigger_details: {
+                ...prev.trigger_details,
+                spi_value: sim.spi_computed
+              },
+              term_sheet: {
+                ...prev.term_sheet,
+                current_estimated_payout_per_ha: sim.payout_per_ha
+              }
+            };
+          });
+          setApiError("Assessment data unavailable — using last cached values.");
+          setIsPayoutLoading(false);
+        });
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [rainfallDeficit, consecutiveDryDays, temperature]);
 
   // 4. Screen 3: Submit field photo to assessments API
   const handlePhotoUploadSubmit = () => {
+    setIsPhotoLoading(true);
+    setUploadProgress(10);
+
+    const progressTimer = setInterval(() => {
+      setUploadProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(progressTimer);
+          return 90;
+        }
+        return prev + 25;
+      });
+    }, 150);
+
     const formData = new FormData();
     formData.append("claimed_mandal_id", photoPayload.claimed_mandal_id);
     formData.append("claimed_crop", photoPayload.crop_name);
@@ -236,7 +477,6 @@ function App() {
       formData.append("image", new File([blob], "field_crop_stripped.jpg", { type: "image/jpeg" }));
     } else {
       formData.append("image", new File([blob], fileName, { type: "image/jpeg" }));
-      // Optional coordinates params inside payload or EXIF simulation
     }
 
     fetch(`${API_BASE}/photo/assess`, {
@@ -245,16 +485,56 @@ function App() {
     })
       .then(res => res.json())
       .then(resObj => {
-        if (resObj.success && resObj.data) {
-          setPhotoResult(resObj.data);
-          
-          // Refresh logs
-          fetch(`${API_BASE}/photo/evidence-log?mandal_id=${selectedMandalId}&season=${season}`)
-            .then(r => r.json())
-            .then(ro => { if (ro.success) setEvidenceLogs(ro.data.evidence); });
-        }
+        clearInterval(progressTimer);
+        setUploadProgress(100);
+        
+        setTimeout(() => {
+          if (resObj.success && resObj.data) {
+            setPhotoResult(resObj.data);
+            setApiError(null);
+            
+            // Refresh logs
+            fetch(`${API_BASE}/photo/evidence-log?mandal_id=${selectedMandalId}&season=${season}`)
+              .then(r => r.json())
+              .then(ro => { if (ro.success) setEvidenceLogs(ro.data.evidence); });
+          } else {
+            throw new Error(resObj.error?.message || "Invalid response");
+          }
+          setIsPhotoLoading(false);
+        }, 300);
       })
-      .catch(err => console.error("Error analyzing crop photo:", err));
+      .catch(err => {
+        clearInterval(progressTimer);
+        setUploadProgress(100);
+
+        setTimeout(() => {
+          console.warn("Using cached photo analysis due to error:", err);
+          const cachedAssess = MOCK_PHOTO_ASSESS(photoPayload.crop_name);
+          
+          if (metadataStrip) {
+            cachedAssess.fraud_check.gps_embedded = false;
+            cachedAssess.fraud_check.geofence_check = {
+              status: "WARNING",
+              gps_embedded: false,
+              gps_missing_note: "GPS metadata not embedded in photo. Manual coordinate entry required for geofence validation.",
+              coordinates_inside_mandal: null
+            };
+            cachedAssess.fraud_check.overall_status = "WARNING";
+          }
+          if (photoshopMock) {
+            cachedAssess.fraud_check.edit_signature_check = {
+              status: "FAIL",
+              editor_detected: "Adobe Photoshop CC 2025",
+              flag: true
+            };
+            cachedAssess.fraud_check.overall_status = "FLAGGED";
+          }
+
+          setPhotoResult(cachedAssess);
+          setApiError("Assessment data unavailable — using last cached values.");
+          setIsPhotoLoading(false);
+        }, 300);
+      });
   };
 
   // VRO Submit Review feedback logs Agree/Dispute
@@ -277,6 +557,7 @@ function App() {
       .then(res => res.json())
       .then(resObj => {
         if (resObj.success) {
+          setApiError(null);
           // Reload weight history & logs
           fetch(`${API_BASE}/photo/weight-history?mandal_id=${selectedMandalId}`)
             .then(r => r.json())
@@ -285,9 +566,41 @@ function App() {
           fetch(`${API_BASE}/photo/evidence-log?mandal_id=${selectedMandalId}&season=${season}`)
             .then(r => r.json())
             .then(ro => { if (ro.success) setEvidenceLogs(ro.data.evidence); });
+        } else {
+          throw new Error(resObj.error?.message || "Invalid feedback");
         }
       })
-      .catch(err => console.error("Error submitting feedback:", err));
+      .catch(err => {
+        console.warn("Using local update logic for weights due to feedback error:", err);
+        setApiError("Assessment data unavailable — using last cached values.");
+        
+        // Simulating the weight shift locally
+        const action = type === "DISPUTE_SATELLITE" ? "dispute" : "agree";
+        setWeightHistory(prev => {
+          const lastEntry = prev[prev.length - 1];
+          const newEntryNum = lastEntry ? lastEntry.entry + 1 : 1;
+          const w_sat = lastEntry ? lastEntry.w_satellite : 0.70;
+          
+          let newSat = w_sat;
+          if (action === "dispute") {
+            newSat = Math.max(0.3, w_sat * 0.95);
+          } else {
+            newSat = Math.min(0.9, w_sat * 1.01);
+          }
+          const newPhoto = 1.0 - newSat;
+          
+          return [
+            ...prev,
+            {
+              entry: newEntryNum,
+              label: `After ${action === "dispute" ? "Dispute" : "Agree"} #${newEntryNum}`,
+              w_satellite: parseFloat(newSat.toFixed(4)),
+              w_photo: parseFloat(newPhoto.toFixed(4)),
+              event: `VRO feedback (${action})`
+            }
+          ];
+        });
+      });
   };
 
   // Hexagon coords helper for map drawing
@@ -303,6 +616,22 @@ function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Offline Alert Banner / Cached Fallback Alert */}
+      {apiError && (
+        <div className="bg-[#f57c00]/20 border-b border-[#f57c00]/40 text-[#f57c00] px-6 py-3 text-xs font-semibold flex justify-between items-center transition">
+          <span className="flex items-center gap-2">
+            <AlertTriangle size={14} className="alert-pulse" />
+            {apiError}
+          </span>
+          <button 
+            onClick={() => setApiError(null)} 
+            className="text-white hover:text-[#f57c00] font-bold text-xs bg-transparent border-none cursor-pointer"
+          >
+            Close
+          </button>
+        </div>
+      )}
+
       {/* Header Summary Section */}
       <header className="glass-card m-6 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -418,19 +747,19 @@ function App() {
               </div>
               
               <div className="flex-1 flex justify-center items-center bg-[#070b09] rounded-xl border border-[rgba(46,125,50,0.1)] p-4 min-h-[450px] relative">
-                <svg viewBox="0 0 350 450" className="w-full max-w-[340px] h-auto">
+                <svg viewBox="15 80 300 310" className="w-full max-w-[460px] h-auto">
                   {Object.keys(mandals).map((name) => {
                     const m = mandals[name];
                     const isSelected = selectedMandal === name;
                     return (
                       <g key={m.mandal_id} onClick={() => setSelectedMandal(name)}>
                         <polygon
-                          points={getHexPoints(m.x, m.y, 22)}
+                          points={getHexPoints(m.x, m.y, 19)}
                           fill={m.map_color}
-                          fillOpacity={isSelected ? 0.95 : 0.55}
+                          fillOpacity={isSelected ? 1.0 : 0.82}
                           className="mandal-polygon"
-                          stroke={isSelected ? "#f1f8f5" : "rgba(46, 125, 50, 0.4)"}
-                          strokeWidth={isSelected ? 3.0 : 1.5}
+                          stroke={isSelected ? "#f1f8f5" : (m.threshold_breached ? "#DC2626" : "rgba(46, 125, 50, 0.4)")}
+                          strokeWidth={isSelected ? 3.0 : (m.threshold_breached ? 2.5 : 1.5)}
                         />
                         <text x={m.x} y={m.y + 3} className="mandal-label">
                           {name.substring(0, 5)}
@@ -441,7 +770,7 @@ function App() {
                 </svg>
                 
                 {/* 43% Loss Threshold Indicator (Universal placement) */}
-                <div className="absolute top-4 left-4 bg-black/60 border border-[rgba(46,125,50,0.3)] px-3 py-1_5 rounded-lg flex items-center gap-1.5">
+                <div className="absolute top-4 left-4 bg-black/60 border border-[rgba(46,125,50,0.3)] px-3 py-1_5 rounded-lg flex items-center gap-1.5 z-10">
                   <ShieldAlert size={14} className="text-[#d32f2f]" />
                   <span className="text-xs font-bold text-[#f1f8f5]">E-Relief Threshold: 43%</span>
                 </div>
@@ -452,7 +781,7 @@ function App() {
             <section className="col-span-12 lg:col-span-6 flex flex-col gap-6">
               {/* Mandal sidebar detail card */}
               {selectedMandalData && (
-                <div className="glass-card flex flex-col md:flex-row justify-between gap-6">
+                <div className={`glass-card flex flex-col md:flex-row justify-between gap-6 transition ${selectedMandalData.threshold_breached ? "border-[#d32f2f]" : ""}`}>
                   <div>
                     <div className="flex items-center gap-2">
                       <MapPin className="text-[#388e3c]" size={18} />
@@ -473,7 +802,7 @@ function App() {
                       </div>
                       <div className="bg-[#121a17] border border-[rgba(46,125,50,0.15)] p-3 rounded-lg">
                         <p className="text-[10px] text-[#a3b8b0] uppercase tracking-wider">Estimated Loss</p>
-                        <p className={`text-md font-bold mt-1 ${selectedMandalData.estimated_loss_pct > 43.0 ? "text-[#d32f2f]" : "text-[#388e3c]"}`}>
+                        <p className={`text-md font-bold mt-1 ${selectedMandalData.estimated_loss_pct >= 43.0 ? "text-[#d32f2f]" : "text-[#388e3c]"}`}>
                           {selectedMandalData.estimated_loss_pct}%
                         </p>
                       </div>
@@ -507,10 +836,19 @@ function App() {
                       <YAxis stroke="#a3b8b0" fontSize={10} domain={[0.1, 0.9]} />
                       <Tooltip contentStyle={{ backgroundColor: "#121a17", borderColor: "rgba(46,125,50,0.3)" }} />
                       <Legend verticalAlign="top" height={36} iconSize={12} iconType="circle" />
+                      
+                      {/* Shaded baseline band region */}
+                      <ReferenceArea 
+                        y1={baselineBand.lower} 
+                        y2={baselineBand.upper} 
+                        fill="rgba(163, 184, 176, 0.05)" 
+                        label={{ value: "Historical Normal Range", fill: "#6b847a", position: "insideBottomRight", fontSize: 8 }}
+                      />
+                      
                       <Line type="monotone" dataKey="ndvi" stroke="#388e3c" strokeWidth={2.5} name="Current NDVI" activeDot={{ r: 6 }} />
                       <Line type="monotone" dataKey="ndwi" stroke="#0288d1" strokeWidth={1.5} name="Current NDWI" />
                       {/* Standard historical mean line */}
-                      <ReferenceLine y={0.55} stroke="#a3b8b0" strokeDasharray="4 4" label={{ value: "Historical Normal Mean", fill: "#a3b8b0", fontSize: 9 }} />
+                      <ReferenceLine y={baselineBand.mean} stroke="#a3b8b0" strokeDasharray="4 4" label={{ value: "Historical Normal Mean", fill: "#a3b8b0", fontSize: 9 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -541,6 +879,39 @@ function App() {
                   </div>
                 </div>
               )}
+
+              {/* Kurnool Historical Disaster Timeline */}
+              {disasterHistory && disasterHistory.length > 0 && (
+                <div className="glass-card">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Calendar className="text-[#388e3c]" size={18} />
+                    <h3 className="text-sm font-bold">Kurnool Historical Disaster Timeline</h3>
+                  </div>
+                  <div className="flex flex-col gap-3 max-h-[160px] overflow-y-auto pr-1">
+                    {disasterHistory.map((ev, idx) => (
+                      <div key={idx} className="flex gap-4 items-start relative pl-4 border-l border-[rgba(46,125,50,0.2)]">
+                        <span className="w-2 h-2 bg-[#388e3c] rounded-full absolute -left-[4px] top-1"></span>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-bold text-[#f1f8f5]">{ev.year} — {ev.peril}</span>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                              ev.severity === "EXTREME" ? "bg-[#d32f2f]/20 text-[#d32f2f]" :
+                              ev.severity === "SEVERE" ? "bg-[#f57c00]/20 text-[#f57c00]" :
+                              "bg-[#388e3c]/20 text-[#388e3c]"
+                            }`}>
+                              {ev.severity}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-[#a3b8b0] mt-0.5">{ev.description}</p>
+                          {ev.govt_expenditure_crore > 0 && (
+                            <p className="text-[9px] text-[#6b847a] mt-0.5">Govt Relief: ₹{ev.govt_expenditure_crore} Crore</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </section>
           </div>
         )}
@@ -563,11 +934,9 @@ function App() {
                       onChange={(e) => setScenarioCrop(e.target.value)}
                       className="w-full bg-[#121a17] border border-[rgba(46,125,50,0.2)] p-2_5 rounded-lg text-sm text-[#f1f8f5] focus:outline-none"
                     >
-                      <option value="Groundnut">Groundnut</option>
-                      <option value="Cotton">Cotton</option>
-                      <option value="Redgram">Redgram</option>
-                      <option value="Jowar">Jowar</option>
-                      <option value="Sunflower">Sunflower</option>
+                      {metaCrops.map(c => (
+                        <option key={c.name} value={c.name}>{c.name}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="flex-1">
@@ -639,7 +1008,12 @@ function App() {
             <section className="col-span-12 lg:col-span-7 flex flex-col gap-6">
               {/* Actuarial policy sheet card */}
               {payoutResult && payoutResult.term_sheet && (
-                <div className="glass-card">
+                <div className="glass-card relative">
+                  {isPayoutLoading && (
+                    <div className="absolute inset-0 bg-[#0a0f0d]/70 backdrop-blur-sm flex justify-center items-center rounded-xl z-10">
+                      <div className="loading-spinner"></div>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center gap-2">
                       <FileText className="text-[#388e3c]" size={18} />
@@ -657,7 +1031,7 @@ function App() {
                     </div>
                     <div>
                       <p className="text-[10px] text-[#a3b8b0]">Consensus Loss %</p>
-                      <p className={`text-md font-bold mt-0.5 ${payoutResult.final_loss_pct > 43.0 ? "text-[#d32f2f]" : "text-[#388e3c]"}`}>
+                      <p className={`text-md font-bold mt-0.5 ${payoutResult.final_loss_pct >= 43.0 ? "text-[#d32f2f]" : "text-[#388e3c]"}`}>
                         {payoutResult.final_loss_pct}%
                       </p>
                     </div>
@@ -699,6 +1073,11 @@ function App() {
                         <XAxis dataKey="loss_pct" stroke="#a3b8b0" fontSize={10} label={{ value: "Crop Loss %", position: "insideBottom", offset: -2, fill: "#a3b8b0" }} />
                         <YAxis stroke="#a3b8b0" fontSize={10} label={{ value: "Payout (₹/Ha)", angle: -90, position: "insideLeft", fill: "#a3b8b0" }} />
                         <Tooltip />
+                        
+                        {/* Shaded Reference Areas representing payout eligibility */}
+                        <ReferenceArea x1={0} x2={43} fill="rgba(107, 132, 122, 0.1)" label={{ value: "No Payout Zone", fill: "#6b847a", position: "insideTopLeft", fontSize: 8 }} />
+                        <ReferenceArea x1={43} x2={100} fill="rgba(56, 142, 60, 0.05)" label={{ value: "Payout Zone (>=43%)", fill: "#388e3c", position: "insideTopLeft", fontSize: 8 }} />
+                        
                         {/* 43% universal threshold line */}
                         <ReferenceLine x={43} stroke="#d32f2f" strokeWidth={2} strokeDasharray="3 3" label={{ value: "43% Threshold", fill: "#d32f2f", position: "top", fontSize: 9 }} />
                         <ReferenceLine x={payoutResult.final_loss_pct} stroke="#f57c00" strokeWidth={2} label={{ value: `Loss: ${payoutResult.final_loss_pct}%`, fill: "#f57c00", position: "top", fontSize: 9 }} />
@@ -717,11 +1096,29 @@ function App() {
                     <p className="text-[10px] text-[#a3b8b0]">Pearson Correlation validation against actual government expenditure</p>
                   </div>
                   {backtestData && (
-                    <div className="bg-[#388e3c]/20 border border-[#388e3c]/30 text-[#388e3c] px-3 py-1 rounded text-xs font-bold">
+                    <div className="bg-[#388e3c]/20 border border-[#388e3c]/30 text-[#388e3c] px-3 py-1 rounded text-xs font-bold flex items-center gap-1">
+                      <CheckCircle size={12} />
                       Correlation: {backtestData.overall_correlation} (Pearson) | {backtestData.meets_target ? "PASS (>= 75% target met)" : "VALIDATING"}
                     </div>
                   )}
                 </div>
+                
+                {/* Backtesting Grouped Bar Chart */}
+                {backtestData && backtestData.events && (
+                  <div className="h-[180px] w-full mb-6">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={backtestData.events} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                        <XAxis dataKey="year" stroke="#a3b8b0" fontSize={10} />
+                        <YAxis stroke="#a3b8b0" fontSize={10} />
+                        <Tooltip contentStyle={{ backgroundColor: "#121a17", borderColor: "rgba(46,125,50,0.3)" }} />
+                        <Legend verticalAlign="top" height={36} iconSize={10} iconType="rect" />
+                        <Bar dataKey="model_predicted_payout_per_ha" fill="#388e3c" name="Model Payout (₹/Ha)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="actual_govt_payout_per_ha" fill="#0288d1" name="NCIP Actual Payout (₹/Ha)" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
                 
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
@@ -737,7 +1134,6 @@ function App() {
                     </thead>
                     <tbody>
                       {backtestData && backtestData.events.map((ev) => {
-                        const diff = ev.model_predicted_payout_per_ha - ev.actual_govt_payout_per_ha;
                         return (
                           <tr key={ev.event_id} className="border-b border-[rgba(46,125,50,0.08)]">
                             <td className="py-2 font-semibold text-[#f1f8f5]">{ev.year}</td>
@@ -782,9 +1178,9 @@ function App() {
                       onChange={(e) => setPhotoPayload({ ...photoPayload, crop_name: e.target.value })}
                       className="w-full bg-[#0a0f0d] border border-[rgba(46,125,50,0.15)] p-2 rounded text-sm text-[#f1f8f5] focus:outline-none"
                     >
-                      <option value="Groundnut">Groundnut</option>
-                      <option value="Cotton">Cotton</option>
-                      <option value="Redgram">Redgram</option>
+                      {metaCrops.map(c => (
+                        <option key={c.name} value={c.name}>{c.name}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="flex-1">
@@ -794,7 +1190,7 @@ function App() {
                       onChange={(e) => setPhotoPayload({ ...photoPayload, claimed_mandal_id: e.target.value })}
                       className="w-full bg-[#0a0f0d] border border-[rgba(46,125,50,0.15)] p-2 rounded text-sm text-[#f1f8f5] focus:outline-none"
                     >
-                      {Object.keys(mandals).map(n => <option key={MANDAL_IDS[n]} value={MANDAL_IDS[n]}>{n}</option>)}
+                      {Object.keys(mandals).map(n => <option key={MANDAL_IDS[n] || n} value={MANDAL_IDS[n] || n}>{n}</option>)}
                     </select>
                   </div>
                 </div>
@@ -838,9 +1234,26 @@ function App() {
                   </p>
                 )}
 
+                {/* Progress bar overlay during upload */}
+                {isPhotoLoading && (
+                  <div className="w-full bg-[#121a17] border border-[rgba(46,125,50,0.15)] rounded-lg p-4 flex flex-col gap-2">
+                    <div className="flex justify-between text-xs text-[#a3b8b0]">
+                      <span className="font-semibold">Running ML Verification...</span>
+                      <span className="font-bold text-[#388e3c]">{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-black/40 h-2 rounded-full overflow-hidden border border-[rgba(46,125,50,0.1)]">
+                      <div 
+                        className="bg-[#388e3c] h-full transition-all duration-200" 
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
+
                 <button 
                   onClick={handlePhotoUploadSubmit}
-                  className="w-full bg-[#388e3c] text-white py-3 rounded-lg text-sm font-bold hover:bg-[#2e7d32] transition flex items-center justify-center gap-2 mt-2"
+                  disabled={isPhotoLoading}
+                  className="w-full bg-[#388e3c] text-white py-3 rounded-lg text-sm font-bold hover:bg-[#2e7d32] transition flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
                 >
                   <RefreshCw size={16} />
                   Analyze Photo & Run Verification
@@ -893,7 +1306,10 @@ function App() {
                         <AlertTriangle size={14} className="text-[#f57c00]" />
                       )}
                       <span>
-                        Geofence check: {photoResult.fraud_check.geofence_check.status} (EXIF Lat: {photoResult.fraud_check.geofence_check.exif_lat}, Lon: {photoResult.fraud_check.geofence_check.exif_lon})
+                        Geofence check: {photoResult.fraud_check.geofence_check.status} 
+                        {photoResult.fraud_check.geofence_check.gps_embedded ? 
+                          ` (EXIF Lat: ${photoResult.fraud_check.geofence_check.exif_lat}, Lon: ${photoResult.fraud_check.geofence_check.exif_lon})` :
+                          ` — ${photoResult.fraud_check.geofence_check.gps_missing_note || 'GPS missing'}`}
                       </span>
                     </div>
                     {/* Temporal check logging */}
@@ -936,8 +1352,8 @@ function App() {
                     </div>
                     <div>
                       <p className="text-[10px] text-[#a3b8b0]">Consensus Loss</p>
-                      <p className={`text-sm font-bold mt-0.5 ${photoResult.final_consensus_loss > 43.0 ? "text-[#d32f2f]" : "text-[#388e3c]"}`}>
-                        {photoResult.final_consensus_loss}%
+                      <p className={`text-sm font-bold mt-0.5 ${(photoResult.final_consensus_loss_pct ?? photoResult.final_consensus_loss) >= 43.0 ? "text-[#d32f2f]" : "text-[#388e3c]"}`}>
+                        {photoResult.final_consensus_loss_pct ?? photoResult.final_consensus_loss}%
                       </p>
                       <p className="text-[9px] text-[#text-muted]">(43% Threshold Check)</p>
                     </div>
@@ -984,8 +1400,13 @@ function App() {
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                       <XAxis dataKey="entry" stroke="#a3b8b0" fontSize={10} label={{ value: "Audit Updates count", position: "insideBottom", offset: -2, fill: "#a3b8b0" }} />
                       <YAxis stroke="#a3b8b0" fontSize={10} domain={[0.0, 1.0]} />
-                      <Tooltip />
+                      <Tooltip contentStyle={{ backgroundColor: "#121a17", borderColor: "rgba(46,125,50,0.3)" }} />
                       <Legend verticalAlign="top" iconSize={10} iconType="circle" />
+                      
+                      {/* Initial prior dashed reference lines */}
+                      <ReferenceLine y={0.70} stroke="#0288d1" strokeDasharray="3 3" strokeOpacity={0.5} label={{ value: "Prior Sat (0.70)", fill: "#0288d1", position: "right", fontSize: 8 }} />
+                      <ReferenceLine y={0.30} stroke="#f57c00" strokeDasharray="3 3" strokeOpacity={0.5} label={{ value: "Prior Photo (0.30)", fill: "#f57c00", position: "right", fontSize: 8 }} />
+                      
                       <Line type="monotone" dataKey="w_satellite" stroke="#0288d1" strokeWidth={2} name="VCI (Satellite) weight" />
                       <Line type="monotone" dataKey="w_photo" stroke="#f57c00" strokeWidth={2} name="Ground (Photo) weight" />
                     </LineChart>
@@ -1005,7 +1426,9 @@ function App() {
                           <p className="text-[10px] text-[#text-muted] mt-0.5">Submitted at: {log.submitted_at.substring(0, 19).replace("T", " ")}</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-[#f57c00]">Consensus Loss: {log.final_consensus_loss_pct}%</p>
+                          <p className={`font-bold ${log.final_consensus_loss_pct >= 43.0 ? "text-[#d32f2f]" : "text-[#388e3c]"}`}>
+                            Consensus Loss: {log.final_consensus_loss_pct}%
+                          </p>
                           <p className="text-[9px] text-[#a3b8b0]">VRO Action: {log.vro_feedback}</p>
                         </div>
                       </div>

@@ -303,6 +303,20 @@ body {
 .max-h-\[150px\] { max-height: 150px; }
 .overflow-y-auto { overflow-y: auto; }
 
+/* Positioning offsets */
+.top-0 { top: 0; }
+.left-0 { left: 0; }
+.top-2 { top: 8px; }
+.left-2 { left: 8px; }
+.top-3 { top: 12px; }
+.left-3 { left: 12px; }
+.top-4 { top: 16px; }
+.left-4 { left: 16px; }
+.right-4 { right: 16px; }
+.bottom-4 { bottom: 16px; }
+.right-3 { right: 12px; }
+.bottom-3 { bottom: 12px; }
+
 /* Interactive Hover States */
 .hover\:bg-\[\#2e7d32\]:hover { background-color: #2e7d32 !important; }
 .hover\:bg-\[\#121a17\]:hover { background-color: #121a17 !important; }
