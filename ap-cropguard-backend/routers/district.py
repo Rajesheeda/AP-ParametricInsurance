@@ -254,6 +254,7 @@ def get_district_mandals(season: str = Query(...)):
                 "threshold_breached":  threshold,
                 "affected_area_ha":    affected_ha,
                 "dominant_crop":       mandal["dominant_crop"],
+                "zone":                mandal["zone"],
                 "map_color":           vci_info["map_color"],
             })
         except Exception:
