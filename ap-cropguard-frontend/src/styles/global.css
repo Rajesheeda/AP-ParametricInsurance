@@ -9,15 +9,15 @@
 /* ── CSS Custom Properties ─────────────────────────────────── */
 :root {
   /* Background layers */
-  --bg-base:       #0A0F1E;
+  --bg-base:       #0F1629;
   --bg-surface:    #0F1629;
-  --bg-elevated:   #151D35;
+  --bg-elevated:   #1E2A47;
   --bg-card:       #1A2340;
   --bg-hover:      #1F2A4A;
 
   /* Borders */
-  --border:        #1E2D4A;
-  --border-subtle: #162035;
+  --border:        rgba(255,255,255,0.15);
+  --border-subtle: rgba(255,255,255,0.08);
   --border-bright: #2A3D5E;
 
   /* Brand / status */
@@ -42,9 +42,9 @@
   --blue-glow:     rgba(59, 130, 246, 0.15);
 
   /* Text */
-  --text-primary:   #F0F4FF;
-  --text-secondary: #8B9EC7;
-  --text-muted:     #4A5D82;
+  --text-primary:   #FFFFFF;
+  --text-secondary: #C8D4E8;
+  --text-muted:     #8A9BBC;
   --text-accent:    #16A34A;
 
   /* Typography */
@@ -105,7 +105,7 @@ body {
   width: var(--sidebar-width);
   min-width: var(--sidebar-width);
   height: 100vh;
-  background: var(--bg-surface);
+  background: #0D1526;
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -166,7 +166,7 @@ body {
 
 /* Colored left-border stat cards */
 .stat-card {
-  background: var(--bg-card);
+  background: #1E2A47;
   border: 1px solid var(--border);
   border-left: 3px solid var(--green);
   border-radius: var(--radius-md);
@@ -183,9 +183,9 @@ body {
 .stat-card__label {
   font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 .stat-card__value {
   font-family: var(--font-display);
@@ -478,7 +478,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 .metric-pill.activated {
   border-color: var(--red);
@@ -596,8 +596,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 /* ── Recharts overrides ─────────────────────────────────────── */
 .recharts-cartesian-axis-tick-value {
-  fill: var(--text-muted) !important;
-  font-size: 11px;
+  fill: #C8D4E8 !important;
+  font-size: 12px;
   font-family: var(--font-body);
 }
 .recharts-legend-item-text {
