@@ -58,6 +58,15 @@ HISTORICAL_RAINFALL = {
         "Pattikonda": [45, 55, 25, 20, 35, 40, 30, 25, 15],  # Moderate drought
         "Kurnool Rural": [50, 60, 30, 25, 45, 50, 35, 30, 20],
         "default": [40, 50, 20, 15, 30, 35, 25, 20, 15]
+    },
+    # 2021: Cyclone Gulab impact year with unseasonal heavy rainfall spike in late September
+    2021: {
+        "Alur": [75, 80, 85, 75, 90, 80, 240, 180, 50],
+        "Aspari": [78, 82, 80, 72, 88, 84, 235, 175, 48],
+        "Adoni-1": [82, 88, 84, 78, 94, 90, 250, 190, 55],
+        "Pattikonda": [72, 78, 76, 70, 84, 80, 220, 160, 45],
+        "Kurnool Rural": [88, 94, 90, 84, 100, 96, 260, 205, 62],
+        "default": [78, 84, 82, 76, 90, 86, 240, 180, 52]
     }
 }
 
@@ -72,6 +81,15 @@ HISTORICAL_NDVI = {
         "Pattikonda": [0.23, 0.31, 0.43, 0.58, 0.70, 0.72, 0.66, 0.55, 0.41],
         "Kurnool Rural": [0.28, 0.36, 0.50, 0.68, 0.80, 0.82, 0.76, 0.65, 0.50],
         "default": [0.25, 0.33, 0.45, 0.62, 0.75, 0.77, 0.71, 0.60, 0.45]
+    },
+    # 2021: Normal greenness followed by a sharp vegetative dip in Sept due to cyclone lodging/cloud cover
+    2021: {
+        "Alur": [0.25, 0.32, 0.45, 0.61, 0.73, 0.72, 0.45, 0.40, 0.35],
+        "Aspari": [0.24, 0.30, 0.42, 0.59, 0.71, 0.70, 0.44, 0.38, 0.33],
+        "Adoni-1": [0.26, 0.34, 0.48, 0.64, 0.76, 0.75, 0.46, 0.42, 0.37],
+        "Pattikonda": [0.23, 0.31, 0.43, 0.57, 0.68, 0.67, 0.42, 0.37, 0.31],
+        "Kurnool Rural": [0.28, 0.36, 0.50, 0.67, 0.79, 0.78, 0.48, 0.44, 0.39],
+        "default": [0.25, 0.33, 0.45, 0.61, 0.72, 0.71, 0.45, 0.40, 0.35]
     },
     # 2023: Flatlining NDVI during vegetative/flowering due to severe dry spell
     2023: {
@@ -99,6 +117,14 @@ NCIP_PMFBY_DATA = {
     2020: {
         # 2020 was a normal/wet year, zero payouts (claims not triggered)
         "default": {"Groundnut": 0, "Cotton": 0, "Redgram": 0, "Jowar": 0, "Sunflower": 0}
+    },
+    2021: {
+        # 2021 was Cyclone Gulab impact year, causing heavy excess rainfall and wind damage in late September
+        "Alur": {"Groundnut": 14500, "Cotton": 18000, "Redgram": 11000, "Jowar": 7000, "Sunflower": 9000},
+        "Aspari": {"Groundnut": 15000, "Cotton": 19000, "Redgram": 12000, "Jowar": 7500, "Sunflower": 9500},
+        "Adoni-1": {"Groundnut": 16000, "Cotton": 20000, "Redgram": 13000, "Jowar": 8000, "Sunflower": 10000},
+        "Pattikonda": {"Groundnut": 12000, "Cotton": 15000, "Redgram": 9000, "Jowar": 5500, "Sunflower": 7500},
+        "default": {"Groundnut": 14000, "Cotton": 17500, "Redgram": 11000, "Jowar": 7000, "Sunflower": 8500}
     },
     2022: {
         # 2022 had localized excess rain/flood damage in low-lying plains (e.g. Adoni, Rural)
@@ -140,3 +166,15 @@ def get_ncip_payout(year, mandal_name, crop_name):
     year_data = NCIP_PMFBY_DATA.get(year, NCIP_PMFBY_DATA[2020])
     mandal_data = year_data.get(mandal_name, year_data.get("default", {}))
     return mandal_data.get(crop_name, 0)
+
+# Real best track coordinates of Cyclone Gulab (September 2021)
+CYCLONE_GULAB_TRACK = [
+    {"time": "2021-09-25T18:00:00Z", "lat": 18.3, "lon": 87.9, "wind_speed_kmph": 75, "status": "Cyclonic Storm"},
+    {"time": "2021-09-26T12:00:00Z", "lat": 18.4, "lon": 84.6, "wind_speed_kmph": 80, "status": "Cyclonic Storm"},
+    {"time": "2021-09-26T15:00:00Z", "lat": 18.4, "lon": 84.2, "wind_speed_kmph": 85, "status": "Landfall (Kalingapatnam)"},
+    {"time": "2021-09-27T00:00:00Z", "lat": 18.4, "lon": 83.1, "wind_speed_kmph": 70, "status": "Deep Depression"},
+    {"time": "2021-09-27T12:00:00Z", "lat": 18.3, "lon": 81.3, "wind_speed_kmph": 55, "status": "Deep Depression"},
+    {"time": "2021-09-28T06:00:00Z", "lat": 18.0, "lon": 78.5, "wind_speed_kmph": 45, "status": "Depression (Kurnool Proximity)"},
+    {"time": "2021-09-28T18:00:00Z", "lat": 18.0, "lon": 76.5, "wind_speed_kmph": 35, "status": "Depression"},
+    {"time": "2021-09-29T00:00:00Z", "lat": 18.0, "lon": 75.5, "wind_speed_kmph": 25, "status": "Remnant Low"}
+]

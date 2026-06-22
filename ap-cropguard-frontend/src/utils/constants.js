@@ -19,4 +19,4 @@ export const DEFAULT_SEASON = "Kharif_2023";
 export const DEFAULT_MANDAL = "KNL_001";
 export const DEFAULT_CROP   = "Groundnut";
 export const DEFAULT_PERIL  = "Drought";
-export const API_BASE = "http://127.0.0.1:8000/api/v1";
+export const API_BASE = "http://127.0.0.1:8010/api/v1";

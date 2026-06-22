@@ -79,6 +79,13 @@ function App() {
   const [payoutResult, setPayoutResult] = useState(MOCK_CALCULATE("Groundnut", "Drought", "KNL_003"));
   const [backtestData, setBacktestData] = useState(MOCK_BACKTEST);
   const [premiumTable, setPremiumTable] = useState(MOCK_PREMIUM_TABLE.table);
+  const [sowingDate, setSowingDate] = useState("2023-07-01");
+  const [disasterDate, setDisasterDate] = useState("2023-09-12");
+
+  useEffect(() => {
+    setSowingDate(selectedYear === 2023 ? "2023-07-01" : (selectedYear === 2021 ? "2021-07-01" : "2020-07-01"));
+    setDisasterDate(selectedYear === 2023 ? "2023-09-12" : (selectedYear === 2021 ? "2021-09-28" : "2020-09-12"));
+  }, [selectedYear]);
   
   // Screen 3 States
   const [uploadedPhoto, setUploadedPhoto] = useState(null);
@@ -102,7 +109,7 @@ function App() {
   const [isRoadmapOpen, setIsRoadmapOpen] = useState(false);
   const [countdown, setCountdown] = useState("23h 41m 15s");
 
-  const season = selectedYear === 2023 ? "Kharif_2023" : "Kharif_2020";
+  const season = selectedYear === 2023 ? "Kharif_2023" : (selectedYear === 2021 ? "Kharif_2021" : "Kharif_2020");
   const selectedMandalId = MANDAL_IDS[selectedMandal] || "KNL_003";
 
   // Helper calculation for mock SPI sliders
@@ -654,6 +661,7 @@ function App() {
               className="bg-transparent text-sm text-[#f1f8f5] font-bold border-none focus:outline-none cursor-pointer"
             >
               <option value={2023}>Kharif 2023 (Drought event)</option>
+              <option value={2021}>Kharif 2021 (Cyclone Gulab)</option>
               <option value={2020}>Kharif 2020 (Normal season)</option>
             </select>
           </div>
@@ -947,9 +955,32 @@ function App() {
                       className="w-full bg-[#121a17] border border-[rgba(46,125,50,0.2)] p-2_5 rounded-lg text-sm text-[#f1f8f5] focus:outline-none"
                     >
                       <option value="Drought">Drought</option>
+                      <option value="Flood">Flooding / Inundation</option>
                       <option value="DrySpell">Consecutive Dry Spell</option>
                       <option value="Heatwave">Heatwave / Thermal Stress</option>
+                      <option value="Cyclone">Cyclone / Wind Storm</option>
                     </select>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 bg-[#121a17] border border-[rgba(46,125,50,0.15)] p-4 rounded-lg">
+                  <div className="flex-1">
+                    <label className="text-xs font-bold text-[#a3b8b0] block mb-1">Sowing Date</label>
+                    <input 
+                      type="date" 
+                      value={sowingDate} 
+                      onChange={(e) => setSowingDate(e.target.value)}
+                      className="w-full bg-[#0a0f0d] border border-[rgba(46,125,50,0.25)] p-2 rounded-lg text-xs text-[#f1f8f5] focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-xs font-bold text-[#a3b8b0] block mb-1">Disaster Event Date</label>
+                    <input 
+                      type="date" 
+                      value={disasterDate} 
+                      onChange={(e) => setDisasterDate(e.target.value)}
+                      className="w-full bg-[#0a0f0d] border border-[rgba(46,125,50,0.25)] p-2 rounded-lg text-xs text-[#f1f8f5] focus:outline-none"
+                    />
                   </div>
                 </div>
 

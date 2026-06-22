@@ -14,6 +14,77 @@ from datetime import datetime
 from data.crops import CROPS, THRESHOLD_LOSS_PCT, get_kc_and_stage, compute_das
 
 
+_SCIENTIFIC_BASIS = {
+    "phenomenon": (
+        "Satellite NDVI underestimates crop yield loss at reproductive growth stages "
+        "because canopy greenness lags physiological and yield decline."
+    ),
+    "references": [
+        {
+            "citation": "Qiu et al. (2022), Agricultural and Forest Meteorology, Vol. 323, 109038",
+            "finding": (
+                "During the 2012 US Midwest drought, crop yield fell 25% but MODIS NDVI "
+                "declined only 4% — NDVI captured a fraction of actual loss."
+            ),
+        },
+        {
+            "citation": "Ding et al. (2022), Catena, Vol. 219, 106328",
+            "finding": (
+                "NDVI drought-propagation time is longer than physiological stress indicators — "
+                "canopy greenness responds to drought after yield damage has begun."
+            ),
+        },
+        {
+            "citation": "Becker & Schmidhalter (2017), Frontiers in Plant Science, 8:379",
+            "finding": (
+                "At wheat reproductive stage (anthesis/grain-fill), NDVI showed weaker "
+                "drought-yield correlation than water-content indices."
+            ),
+        },
+    ],
+}
+
+
+def compute_sensor_divergence_coefficient(
+    satellite_loss_pct: float,
+    weather_loss_pct: float,
+    kc_multiplier: float,
+    crop_stage_label: str,
+) -> dict:
+    """
+    Sensor Divergence Coefficient (SDC) — quantifies how much the weather signal
+    exceeds the satellite signal, scaled by crop-stage vulnerability (Kc).
+
+    SDC = (raw_divergence / 100.0) * kc_multiplier
+
+    Grounded in peer-reviewed evidence that NDVI lags actual yield loss during
+    reproductive-stage drought (Qiu et al. 2022; Ding et al. 2022;
+    Becker & Schmidhalter 2017).
+    """
+    raw_divergence = float(weather_loss_pct) - float(satellite_loss_pct)
+    sdc = (raw_divergence / 100.0) * float(kc_multiplier)
+
+    if raw_divergence > 30 and float(kc_multiplier) >= 1.5:
+        interpretation = "SATELLITE_BLIND_TO_REPRODUCTIVE_LOSS"
+        sensor_decision = "WEATHER_PRIMARY"
+    elif raw_divergence > 30:
+        interpretation = "WEATHER_LEADS_SATELLITE"
+        sensor_decision = "BALANCED"
+    elif raw_divergence < -30:
+        interpretation = "NON_WEATHER_VEGETATION_STRESS"
+        sensor_decision = "SATELLITE_PRIMARY"
+    else:
+        interpretation = "SENSORS_CONVERGENT"
+        sensor_decision = "BALANCED"
+
+    return {
+        "sdc_value":       round(sdc, 3),
+        "raw_divergence":  round(raw_divergence, 1),
+        "interpretation":  interpretation,
+        "sensor_decision": sensor_decision,
+    }
+
+
 def compute_parametric_loss(
     satellite_loss_pct: float,
     weather_loss_pct: float,

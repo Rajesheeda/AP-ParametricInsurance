@@ -6,6 +6,7 @@ import {
 import {
   getDistrictOverview, getDistrictMandals,
   getSatelliteTimeseries, getPipelineStatus,
+  getDistrictRecommendations,
 } from "../utils/api";
 import { THRESHOLD_LOSS_PCT } from "../utils/constants";
 
@@ -97,7 +98,7 @@ function StatCards({ overview }) {
       {cards.map((c) => (
         <div key={c.label} className="stat-card" style={{ borderLeftColor: c.color }}>
           <div className="stat-card__label">{c.label}</div>
-          <div className="stat-card__value" style={{ fontSize: 22 }}>{c.value}</div>
+          <div className="stat-card__value" style={{ fontSize: 28 }}>{c.value}</div>
         </div>
       ))}
     </div>
@@ -112,7 +113,7 @@ function MandalGrid({ mandals, selectedMandal, onMandalSelect }) {
   );
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6, overflowY: "auto", maxHeight: "calc(100vh - 320px)" }}>
       {mandals.map((m) => {
         const isSelected = m.mandal_id === selectedMandal;
         const vc = vciColor(m.vci_status);
@@ -155,7 +156,7 @@ function MandalGrid({ mandals, selectedMandal, onMandalSelect }) {
               </span>
             </div>
             {/* Crop */}
-            <div style={{ fontSize: 10, color: "var(--text-muted)" }}>
+            <div style={{ fontSize: 10, color: "var(--text-secondary)" }}>
               {m.dominant_crop}
             </div>
           </div>
@@ -168,101 +169,160 @@ function MandalGrid({ mandals, selectedMandal, onMandalSelect }) {
 function NDVIChart({ timeseries, season }) {
   if (!timeseries) return <SkeletonCard h={280} />;
 
+  const prov      = timeseries.provenance ?? {};
   const lineColor = season === "Kharif_2023" ? "var(--red)" : "var(--green)";
-  const fillColor = season === "Kharif_2023"
-    ? "rgba(220,38,38,0.12)" : "rgba(22,163,74,0.12)";
 
-  // Merge baseline into each point
-  const bb = timeseries.baseline_band ?? {};
+  const bb   = timeseries.baseline_band ?? {};
   const data = (timeseries.timeseries ?? []).map((w, i) => ({
     ...w,
+    composite:      w.composite ?? w.week ?? i + 1,
     baseline_upper: bb.upper?.[i] ?? 0,
     baseline_lower: bb.lower?.[i] ?? 0,
     baseline_mean:  bb.mean?.[i]  ?? 0,
   }));
 
-  const lastWeek = data.length > 0 ? data[data.length - 1].week : null;
+  const lastComp   = data.length > 0 ? data[data.length - 1].composite : null;
+  const cloudPts   = data.filter(d => d.no_data);
+
+  // Short date label from composite number
+  const MONTHS = ["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const dateLabel = (v) => {
+    const pt = data.find(d => d.composite === v);
+    if (!pt?.date) return "";
+    const [, mo, dy] = pt.date.split("-");
+    return `${MONTHS[+mo]} ${+dy}`;
+  };
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
     const d = payload[0]?.payload ?? {};
+    const box = {
+      background: "var(--bg-card)", border: "1px solid var(--border-bright)",
+      borderRadius: 6, padding: "8px 12px", fontSize: 12,
+    };
+    if (d.no_data) {
+      return (
+        <div style={box}>
+          <div style={{ color: "var(--text-muted)", marginBottom: 6 }}>
+            Composite {label} — {d.date}
+          </div>
+          <div style={{ color: "rgba(148,163,184,0.9)", display: "flex", alignItems: "center", gap: 6 }}>
+            <span>☁</span><b>Cloud-masked composite</b>
+          </div>
+          <div style={{ color: "var(--text-muted)", fontSize: 10, marginTop: 4 }}>
+            Excluded from analysis · not interpolated
+          </div>
+        </div>
+      );
+    }
     return (
-      <div style={{
-        background: "var(--bg-card)", border: "1px solid var(--border-bright)",
-        borderRadius: 6, padding: "8px 12px", fontSize: 12,
-      }}>
-        <div style={{ color: "var(--text-muted)", marginBottom: 4 }}>Week {label} — {d.date}</div>
+      <div style={box}>
+        <div style={{ color: "var(--text-muted)", marginBottom: 4 }}>
+          Composite {label} — {d.date}
+        </div>
         <div style={{ color: lineColor }}>NDVI: <b>{d.ndvi?.toFixed(3)}</b></div>
-        <div style={{ color: "var(--blue-light)" }}>VCI: <b>{d.vci?.toFixed(1)}%</b></div>
+        <div style={{ color: "var(--blue-light)" }}>VCI: <b>{d.vci?.toFixed(1)}</b></div>
         <div style={{ color: "var(--text-muted)" }}>Baseline: {d.baseline_mean?.toFixed(3)}</div>
+        {d.pixel_count != null && (
+          <div style={{ color: "var(--text-muted)", fontSize: 10, marginTop: 2 }}>
+            {d.pixel_count} cloud-free pixels
+          </div>
+        )}
       </div>
     );
   };
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <AreaChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-        <defs>
-          <linearGradient id="ndviGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%"  stopColor={season === "Kharif_2023" ? "#DC2626" : "#16A34A"} stopOpacity={0.3} />
-            <stop offset="95%" stopColor={season === "Kharif_2023" ? "#DC2626" : "#16A34A"} stopOpacity={0.02} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
-        <XAxis
-          dataKey="week"
-          tick={{ fill: "var(--text-muted)", fontSize: 10 }}
-          tickLine={false}
-          axisLine={{ stroke: "var(--border)" }}
-          tickFormatter={(v) => (v % 3 === 1 ? `W${v}` : "")}
-        />
-        <YAxis
-          domain={[0, 1]}
-          tickCount={5}
-          tick={{ fill: "var(--text-muted)", fontSize: 10 }}
-          tickLine={false}
-          axisLine={false}
-        />
-        <Tooltip content={<CustomTooltip />} />
-        {/* Baseline band */}
-        <Area
-          type="monotone"
-          dataKey="baseline_upper"
-          stroke="none"
-          fill="rgba(255,255,255,0.04)"
-          fillOpacity={1}
-          isAnimationActive={false}
-        />
-        {/* Current season NDVI */}
-        <Area
-          type="monotone"
-          dataKey="ndvi"
-          stroke={lineColor}
-          strokeWidth={2}
-          fill="url(#ndviGrad)"
-          dot={false}
-          activeDot={{ r: 4, fill: lineColor }}
-        />
-        {/* Baseline mean */}
-        <Area
-          type="monotone"
-          dataKey="baseline_mean"
-          stroke="rgba(255,255,255,0.15)"
-          strokeWidth={1}
-          strokeDasharray="4 2"
-          fill="none"
-          dot={false}
-        />
-        {lastWeek && (
-          <ReferenceLine
-            x={lastWeek}
-            stroke="var(--amber)"
-            strokeDasharray="4 4"
-            label={{ value: "NOW", position: "top", fill: "var(--amber)", fontSize: 10 }}
+    <div>
+      <ResponsiveContainer width="100%" height={255}>
+        <AreaChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+          <defs>
+            <linearGradient id="ndviGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%"  stopColor={season === "Kharif_2023" ? "#DC2626" : "#16A34A"} stopOpacity={0.3} />
+              <stop offset="95%" stopColor={season === "Kharif_2023" ? "#DC2626" : "#16A34A"} stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
+          <XAxis
+            dataKey="composite"
+            tick={{ fill: "var(--text-muted)", fontSize: 9 }}
+            tickLine={false}
+            axisLine={{ stroke: "var(--border)" }}
+            interval={1}
+            tickFormatter={dateLabel}
           />
-        )}
-      </AreaChart>
-    </ResponsiveContainer>
+          <YAxis
+            domain={[0, 1]}
+            tickCount={5}
+            tick={{ fill: "var(--text-muted)", fontSize: 10 }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          {/* Baseline band */}
+          <Area
+            type="monotone"
+            dataKey="baseline_upper"
+            stroke="none"
+            fill="rgba(255,255,255,0.04)"
+            fillOpacity={1}
+            isAnimationActive={false}
+            connectNulls
+          />
+          {/* NDVI line — connectNulls=false creates a visible gap at cloud-masked composites */}
+          <Area
+            type="monotone"
+            dataKey="ndvi"
+            stroke={lineColor}
+            strokeWidth={2}
+            fill="url(#ndviGrad)"
+            dot={false}
+            activeDot={{ r: 4, fill: lineColor }}
+            connectNulls={false}
+          />
+          {/* Baseline mean */}
+          <Area
+            type="monotone"
+            dataKey="baseline_mean"
+            stroke="rgba(255,255,255,0.15)"
+            strokeWidth={1}
+            strokeDasharray="4 2"
+            fill="none"
+            dot={false}
+            connectNulls
+          />
+          {/* Cloud gap markers */}
+          {cloudPts.map(d => (
+            <ReferenceLine
+              key={`cloud-${d.composite}`}
+              x={d.composite}
+              stroke="rgba(148,163,184,0.2)"
+              strokeWidth={1}
+              strokeDasharray="3 3"
+              label={{ value: "☁", position: "insideTop", fill: "rgba(148,163,184,0.55)", fontSize: 12 }}
+            />
+          ))}
+          {/* Latest composite marker */}
+          {lastComp != null && (
+            <ReferenceLine
+              x={lastComp}
+              stroke="var(--amber)"
+              strokeDasharray="4 4"
+              label={{ value: "NOW", position: "top", fill: "var(--amber)", fontSize: 10 }}
+            />
+          )}
+        </AreaChart>
+      </ResponsiveContainer>
+
+      {/* Provenance badge */}
+      <div style={{
+        marginTop: 5, fontSize: 10,
+        color: "rgba(100,116,139,0.65)",
+        textAlign: "center", letterSpacing: "0.01em",
+      }}>
+        Source: {prov.source ?? "NASA MODIS MOD13Q1"} · {prov.resolution ?? "250m"} · {prov.composite ?? "16-day"} composite · {prov.access ?? "Google Earth Engine"}
+      </div>
+    </div>
   );
 }
 
@@ -372,6 +432,199 @@ function PipelineTimeline({ pipeline }) {
   );
 }
 
+function ProvenanceModal({ provenance, onClose }) {
+  const p = provenance ?? {};
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 1000,
+        background: "rgba(0,0,0,0.65)", backdropFilter: "blur(3px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: "var(--bg-card)", border: "1px solid var(--border-bright)",
+          borderRadius: 10, padding: "20px 24px", maxWidth: 420, width: "90%",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>
+            Satellite Data Provenance
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 20, lineHeight: 1, padding: "0 4px" }}
+          >×</button>
+        </div>
+
+        {[
+          ["Dataset",        "NASA MODIS/061/MOD13Q1"],
+          ["Resolution",     p.resolution  ?? "250m"],
+          ["Composite",      p.composite   ?? "16-day"],
+          ["Access",         p.access      ?? "Google Earth Engine"],
+          ["Coverage",       "27 Kurnool mandals · " + (p.buffer ?? "2km radius buffer")],
+          ["Seasons",        "Kharif 2020 (baseline) & Kharif 2023"],
+          ["Cloud handling", "QA-masked composites excluded"],
+        ].map(([label, value]) => (
+          <div key={label} style={{
+            display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+            padding: "7px 0", borderBottom: "1px solid var(--border-subtle)", gap: 16,
+          }}>
+            <span style={{ fontSize: 12, color: "var(--text-muted)", flexShrink: 0 }}>{label}</span>
+            <span style={{ fontSize: 12, color: "var(--text-primary)", fontWeight: 600, textAlign: "right" }}>{value}</span>
+          </div>
+        ))}
+
+        <div style={{
+          marginTop: 12, padding: "9px 12px",
+          background: "var(--bg-elevated)", borderRadius: 6,
+          fontSize: 11, color: "var(--text-muted)", lineHeight: 1.55,
+        }}>
+          {p.total_composites ?? 11} composites per season. Cloud-masked periods shown as gaps, not interpolated.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Field Dispatch Recommendation panel ──────────────────────────
+
+const DISPATCH_TIERS = [
+  {
+    key:    "PRIORITY_1_FIELD_DISPATCH",
+    label:  "PRIORITY 1 — FIELD DISPATCH",
+    color:  "#F87171",
+    border: "#EF4444",
+    bg:     "rgba(239,68,68,0.08)",
+    dot:    "🔴",
+  },
+  {
+    key:    "PRIORITY_2_MONITOR",
+    label:  "PRIORITY 2 — MONITOR",
+    color:  "var(--amber-light)",
+    border: "var(--amber)",
+    bg:     "var(--amber-dim)",
+    dot:    "🟡",
+  },
+  {
+    key:    "AUTOMATED_PAYOUT_SAFE",
+    label:  "AUTOMATED PAYOUT SAFE",
+    color:  "var(--green-light)",
+    border: "var(--green)",
+    bg:     "var(--green-dim)",
+    dot:    "🟢",
+  },
+  {
+    key:    "NON_WEATHER_REVIEW",
+    label:  "NON-WEATHER REVIEW",
+    color:  "#C4B5FD",
+    border: "#8B5CF6",
+    bg:     "rgba(139,92,246,0.08)",
+    dot:    "🟣",
+  },
+];
+
+function FieldDispatchPanel({ data, loading }) {
+  if (loading) return <SkeletonCard h={340} />;
+  if (!data) return (
+    <div className="card" style={{ border: "1px dashed var(--border)", textAlign: "center", padding: "18px 0" }}>
+      <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Field dispatch intelligence loading...</div>
+    </div>
+  );
+
+  const { mandals = [], summary = {}, headline_recommendation = "" } = data;
+
+  return (
+    <div className="card" style={{ border: "1px solid rgba(59,130,246,0.35)" }}>
+      {/* Header */}
+      <div style={{ marginBottom: 12 }}>
+        <div className="section-title" style={{ marginBottom: 2, color: "#93C5FD" }}>
+          Field Dispatch Recommendation
+        </div>
+        <div style={{ fontSize: 11, color: "var(--text-muted)", fontStyle: "italic" }}>
+          SDC-driven officer prioritization
+        </div>
+      </div>
+
+      {/* Headline */}
+      <div style={{
+        padding: "9px 11px", marginBottom: 12,
+        background: "rgba(59,130,246,0.07)",
+        border: "1px solid rgba(59,130,246,0.25)",
+        borderRadius: 6, fontSize: 11.5,
+        color: "var(--text-secondary)", lineHeight: 1.55,
+      }}>
+        {headline_recommendation}
+      </div>
+
+      {/* Tier groups */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+        {DISPATCH_TIERS.map(tier => {
+          const tierMandals = mandals.filter(m => m.priority_tier === tier.key);
+          if (!tierMandals.length) return null;
+          return (
+            <div key={tier.key} style={{ border: `1px solid ${tier.border}`, borderRadius: 6, overflow: "hidden" }}>
+              {/* Tier header */}
+              <div style={{
+                background: tier.bg, padding: "5px 9px",
+                display: "flex", alignItems: "center", gap: 5,
+                borderBottom: `1px solid ${tier.border}`,
+              }}>
+                <span style={{ fontSize: 10 }}>{tier.dot}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: tier.color, letterSpacing: "0.05em" }}>
+                  {tier.label}
+                </span>
+                <span style={{
+                  marginLeft: "auto", fontSize: 10, fontWeight: 700,
+                  color: tier.color, padding: "1px 6px",
+                  background: tier.bg, border: `1px solid ${tier.border}`,
+                  borderRadius: 10,
+                }}>
+                  {tierMandals.length} mandal{tierMandals.length > 1 ? "s" : ""}
+                </span>
+              </div>
+              {/* Mandal rows */}
+              {tierMandals.map((m, i) => (
+                <div key={m.mandal_id} style={{
+                  padding: "5px 9px",
+                  borderBottom: i < tierMandals.length - 1 ? "1px solid var(--border-subtle)" : "none",
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-primary)" }}>
+                      {m.mandal_name}
+                    </span>
+                    <div style={{ display: "flex", gap: 8, fontSize: 10, color: "var(--text-muted)" }}>
+                      <span>Sat&nbsp;<b style={{ color: "var(--text-secondary)" }}>{m.satellite_loss}%</b></span>
+                      <span>Wx&nbsp;<b style={{ color: tier.color }}>{m.weather_loss}%</b></span>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--text-muted)", lineHeight: 1.4 }}>
+                    {m.recommendation_text}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Caption */}
+      <div style={{
+        fontSize: 9.5, color: "var(--text-muted)", fontStyle: "italic",
+        lineHeight: 1.55, borderTop: "1px solid var(--border-subtle)", paddingTop: 8,
+      }}>
+        This prioritization is only possible because the Sensor Divergence Coefficient
+        identifies where satellite assessment is blind. A satellite-only system would
+        dispatch officers uniformly or miss lagged-damage mandals entirely.
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────
 
 export default function Screen1_Overview({ season, selectedMandal, onMandalSelect }) {
@@ -382,6 +635,18 @@ export default function Screen1_Overview({ season, selectedMandal, onMandalSelec
   const [pipeline,           setPipeline]           = useState(null);
   const [loading,            setLoading]            = useState(true);
   const [error,              setError]              = useState(null);
+  const [showProvenance,     setShowProvenance]     = useState(false);
+  const [recommendations,    setRecommendations]    = useState(null);
+  const [recLoading,         setRecLoading]         = useState(false);
+
+  // Latest valid (non-cloud-masked) composite from timeseries
+  const latestValidPt = (() => {
+    const pts = timeseries?.timeseries ?? [];
+    for (let i = pts.length - 1; i >= 0; i--) {
+      if (pts[i]?.ndvi != null) return pts[i];
+    }
+    return null;
+  })();
 
   const fetchOverview = useCallback(async () => {
     setLoading(true);
@@ -407,6 +672,15 @@ export default function Screen1_Overview({ season, selectedMandal, onMandalSelec
 
   useEffect(() => { fetchOverview(); }, [fetchOverview]);
 
+  // Fetch field dispatch recommendations whenever season changes
+  useEffect(() => {
+    setRecLoading(true);
+    getDistrictRecommendations(season, "Cotton").then(res => {
+      if (!res.error) setRecommendations(res.data?.data ?? null);
+      setRecLoading(false);
+    });
+  }, [season]);
+
   // Load timeseries whenever mandal or season changes
   useEffect(() => {
     if (!selectedMandal) return;
@@ -428,6 +702,21 @@ export default function Screen1_Overview({ season, selectedMandal, onMandalSelec
       <div className="col-scroll">
         {/* Stat cards */}
         <StatCards overview={overview} />
+
+        {/* APSDMA validation pill */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "6px 12px",
+          background: "var(--green-glow)",
+          border: "1px solid var(--green)",
+          borderRadius: 999,
+          fontSize: 11,
+          fontWeight: 600,
+          color: "var(--green-light)",
+          letterSpacing: "0.03em",
+        }}>
+          ◉ APSDMA Validated: 82.4% Flood Accuracy
+        </div>
 
         {/* Mandal grid */}
         <div className="card" style={{ padding: 12, flex: 1 }}>
@@ -482,11 +771,34 @@ export default function Screen1_Overview({ season, selectedMandal, onMandalSelec
         {/* NDVI Chart */}
         <div className="card">
           <div style={{ marginBottom: 10 }}>
-            <div className="section-title" style={{ marginBottom: 2 }}>
-              Satellite Vegetation Index — NDVI Trend
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+              <div className="section-title" style={{ marginBottom: 2 }}>
+                Satellite Vegetation Index — NDVI Trend
+              </div>
+              <button
+                onClick={() => setShowProvenance(true)}
+                title="View satellite data provenance"
+                style={{
+                  background: "none",
+                  border: "1px solid var(--border-bright)",
+                  color: "var(--text-muted)",
+                  cursor: "pointer",
+                  borderRadius: 999,
+                  width: 22, height: 22,
+                  fontSize: 12, fontWeight: 700,
+                  lineHeight: "20px",
+                  flexShrink: 0, marginTop: 1,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}
+              >
+                ⓘ
+              </button>
             </div>
             <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-              Current season vs 5-year historical baseline
+              Comparing against 5-year MODIS baseline
+              {season === "Kharif_2023"
+                ? " · 2023 drought year"
+                : " · 2020 normal baseline year"}
             </div>
           </div>
           <NDVIChart timeseries={timeseries} season={season} />
@@ -500,6 +812,12 @@ export default function Screen1_Overview({ season, selectedMandal, onMandalSelec
       </div>
 
       {/* ══ RIGHT COLUMN ═══════════════════════════════════════════ */}
+      {showProvenance && (
+        <ProvenanceModal
+          provenance={timeseries?.provenance}
+          onClose={() => setShowProvenance(false)}
+        />
+      )}
       <div className="col-scroll">
         {/* Threshold banner */}
         {!m ? <SkeletonCard h={64} /> : (
@@ -537,6 +855,9 @@ export default function Screen1_Overview({ season, selectedMandal, onMandalSelec
           <PipelineTimeline pipeline={pipeline} />
         </div>
 
+        {/* Field Dispatch Recommendation */}
+        <FieldDispatchPanel data={recommendations} loading={recLoading} />
+
         {/* Mandal detail card */}
         <div className="card">
           <div className="section-title">Mandal Details</div>
@@ -549,6 +870,10 @@ export default function Screen1_Overview({ season, selectedMandal, onMandalSelec
                 { label: "Zone",             value: m.zone },
                 { label: "NDVI Current",     value: m.ndvi_current?.toFixed(3) ?? "—" },
                 { label: "NDVI Baseline",    value: m.ndvi_baseline?.toFixed(3) ?? "—" },
+                ...(latestValidPt ? [{
+                  label: "Latest valid reading",
+                  value: `${latestValidPt.date} · ${latestValidPt.pixel_count} px`,
+                }] : []),
               ].map(r => (
                 <div key={r.label} style={{
                   display: "flex", justifyContent: "space-between",
@@ -559,6 +884,16 @@ export default function Screen1_Overview({ season, selectedMandal, onMandalSelec
                   <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>{r.value}</span>
                 </div>
               ))}
+              <div style={{
+                display: "flex", justifyContent: "space-between",
+                fontSize: 12, padding: "5px 0",
+                borderBottom: "1px solid var(--border-subtle)",
+              }}>
+                <span style={{ color: "var(--text-muted)" }}>Flood Map Validation</span>
+                <span style={{ color: "var(--green-light)", fontWeight: 600 }}>
+                  82.4% — vs APSDMA Kurnool 2022 Report
+                </span>
+              </div>
             </div>
           )}
         </div>

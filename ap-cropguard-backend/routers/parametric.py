@@ -19,11 +19,21 @@ from data.historical import get_disaster_history
 from engines.spi_engine import (
     compute_spi, classify_spi, compute_cdd, check_drought_triggers,
 )
-from engines.vci_engine import estimate_satellite_loss
+from engines.weather_loader import (
+    compute_real_spi as _compute_real_spi,
+    get_rainfall_provenance,
+)
+from engines.vci_engine import (
+    compute_vci, classify_vci, compute_ndvi_anomaly, estimate_satellite_loss,
+)
+from engines.satellite_loader import (
+    get_nearest_composite, get_mandal_ndvi_bounds, get_mandal_season_mean,
+)
 from engines.actuarial_engine import (
     compute_weather_loss, compute_parametric_loss,
     compute_payout, build_payout_curve,
     compute_premium, build_term_sheet,
+    compute_sensor_divergence_coefficient, _SCIENTIFIC_BASIS,
 )
 from engines.backtest_engine import run_full_backtest, run_all_crops_backtest
 
@@ -140,42 +150,143 @@ def post_parametric_calculate(req: CalculateRequest):
     das = compute_das(req.sowing_date, req.disaster_date)
     kc, crop_stage = get_kc_and_stage(req.crop, das)
 
-    # SPI — use supplied value or derive from rainfall deficit
+    # SPI — use supplied value, then real rainfall, then synthetic proxy
     wi = req.weather_inputs
+    spi_source = "provided"
+    spi_detail = {}
+
     if wi.spi_value is not None:
         spi_val = float(wi.spi_value)
+        spi_source = "provided"
     else:
-        spi_val = _compute_spi_from_deficit(wi.rainfall_deficit_pct)
+        try:
+            real = _compute_real_spi(
+                req.mandal_id, req.season,
+                crop=req.crop, sowing_date=req.sowing_date,
+            )
+            spi_val = real["spi"]
+            spi_source = "real_rainfall"
+            spi_detail = {
+                "cumulative_rainfall_mm": real["cumulative_rainfall_mm"],
+                "baseline_mean_mm":       real["baseline_mean_mm"],
+                "window_months":          real["window_months"],
+                "window_derivation":      real["window_derivation"],
+                "critical_stage":         real.get("critical_stage"),
+                "critical_stage_dates":   real.get("critical_stage_dates"),
+                "data_source":            get_rainfall_provenance()["source"],
+            }
+        except (ValueError, KeyError):
+            spi_val = _compute_spi_from_deficit(wi.rainfall_deficit_pct)
+            spi_source = "rainfall_deficit_proxy"
 
     cdd_val = int(wi.consecutive_dry_days)
     triggers = check_drought_triggers(spi_val, cdd_val)
 
-    # Loss computation
-    weather_loss    = compute_weather_loss(spi_val, cdd_val, wi.max_temp_celsius, req.peril)
-    satellite_loss  = weather_loss * 0.95
-    parametric_loss = compute_parametric_loss(satellite_loss, weather_loss, kc)
+    # Weather loss (from SPI / CDD / temperature)
+    weather_loss = compute_weather_loss(spi_val, cdd_val, wi.max_temp_celsius, req.peril)
 
+    # Satellite loss — real MODIS VCI for the mandal, nearest composite <= disaster_date
+    sat_detail: dict = {}
+    sat_loss_source = "weather_proxy"
+    try:
+        composite = get_nearest_composite(req.mandal_id, req.season, req.disaster_date)
+        if composite is not None:
+            ndvi_min, ndvi_max = get_mandal_ndvi_bounds(req.mandal_id)
+            baseline_mean = get_mandal_season_mean(req.mandal_id, "Kharif_2020") or composite["ndvi"]
+            vci_val  = compute_vci(composite["ndvi"], ndvi_min, ndvi_max)
+            vci_cls  = classify_vci(vci_val)
+            anomaly  = compute_ndvi_anomaly(composite["ndvi"], baseline_mean)
+            satellite_loss = estimate_satellite_loss(vci_val, anomaly)
+            sat_loss_source = "modis_vci"
+            sat_detail = {
+                "composite_date":     composite["date"],
+                "ndvi":               composite["ndvi"],
+                "evi":                composite["evi"],
+                "ndwi":               composite["ndwi"],
+                "cloud_quality":      composite["cloud_quality"],
+                "vci":                round(vci_val, 1),
+                "vci_status":         vci_cls["status"],
+                "ndvi_anomaly_pct":   anomaly,
+                "ndvi_min":           ndvi_min,
+                "ndvi_max":           ndvi_max,
+                "baseline_mean_ndvi": round(float(baseline_mean), 4),
+            }
+        else:
+            satellite_loss = weather_loss * 0.95
+            sat_loss_source = "weather_proxy_no_composite"
+    except Exception:
+        satellite_loss = weather_loss * 0.95
+        sat_loss_source = "weather_proxy_fallback"
+
+    # Divergence analysis — classify the relationship between weather and satellite signals
+    signal_divergence = round(abs(satellite_loss - weather_loss), 1)
+    if weather_loss >= 30.0 and satellite_loss < 20.0:
+        divergence_analysis = "LAGGED_DAMAGE"
+        divergence_message = (
+            "Weather indices show drought stress at the critical crop stage, but canopy "
+            "greenness (NDVI) has not yet collapsed. This is characteristic of "
+            "flowering/reproductive-stage drought, where yield loss precedes visible canopy "
+            "decline. Satellite-only assessment would miss this event. Parametric weather "
+            "triggers capture it."
+        )
+        # Trust weather more: canopy lag means satellite under-represents damage
+        raw_loss = weather_loss * 0.75 + satellite_loss * 0.25
+    elif weather_loss >= 30.0 and satellite_loss >= 30.0:
+        divergence_analysis = "CONFIRMED_LOSS"
+        divergence_message = (
+            "Both weather indices and satellite vegetation confirm crop loss."
+        )
+        raw_loss = satellite_loss * 0.5 + weather_loss * 0.5
+    elif satellite_loss >= 30.0 and weather_loss < 20.0:
+        divergence_analysis = "NON_WEATHER_STRESS"
+        divergence_message = (
+            "Vegetation decline not explained by weather — possible pest, disease, or "
+            "non-climatic cause. Flag for field review."
+        )
+        raw_loss = satellite_loss * 0.6 + weather_loss * 0.4
+    else:
+        divergence_analysis = "NO_SIGNIFICANT_LOSS"
+        divergence_message = (
+            "No significant loss signal in either weather or satellite indicators."
+        )
+        raw_loss = satellite_loss * 0.6 + weather_loss * 0.4
+
+    parametric_loss = float(min(raw_loss * kc, 100.0))
     payout, threshold_breached = compute_payout(req.crop, parametric_loss)
 
+    sdc = compute_sensor_divergence_coefficient(
+        satellite_loss, weather_loss, kc, crop_stage
+    )
+
     freq = _PERIL_EVENT_FREQUENCY.get(req.peril, 1)
-    term_sheet    = build_term_sheet(req.crop, req.peril, parametric_loss, spi_val, cdd_val, freq)
-    payout_curve  = build_payout_curve(req.crop)
+    term_sheet   = build_term_sheet(req.crop, req.peril, parametric_loss, spi_val, cdd_val, freq)
+    payout_curve = build_payout_curve(req.crop)
 
     return make_response({
-        "crop":                 req.crop,
-        "peril":                req.peril,
-        "mandal":               mandal["mandal_name"],
-        "das_at_event":         das,
-        "crop_stage":           crop_stage,
-        "kc_multiplier":        kc,
-        "satellite_loss_pct":   round(satellite_loss, 1),
-        "parametric_loss_pct":  round(parametric_loss, 1),
-        "final_loss_pct":       round(parametric_loss, 1),
-        "threshold_43_breached": threshold_breached,
-        "trigger_activated":    triggers["overall_trigger"],
-        "trigger_details":      triggers,
-        "term_sheet":           term_sheet,
-        "payout_curve":         payout_curve,
+        "crop":                          req.crop,
+        "peril":                         req.peril,
+        "mandal":                        mandal["mandal_name"],
+        "das_at_event":                  das,
+        "crop_stage":                    crop_stage,
+        "kc_multiplier":                 kc,
+        "satellite_loss_pct":            round(satellite_loss, 1),
+        "weather_loss_pct":              round(weather_loss, 1),
+        "signal_divergence":             signal_divergence,
+        "divergence_analysis":           divergence_analysis,
+        "divergence_message":            divergence_message,
+        "sensor_divergence_coefficient": sdc,
+        "scientific_basis":              _SCIENTIFIC_BASIS,
+        "sat_loss_source":               sat_loss_source,
+        "satellite_detail":              sat_detail,
+        "parametric_loss_pct":           round(parametric_loss, 1),
+        "final_loss_pct":                round(parametric_loss, 1),
+        "threshold_43_breached":         threshold_breached,
+        "trigger_activated":             triggers["overall_trigger"],
+        "trigger_details":               triggers,
+        "spi_source":                    spi_source,
+        "spi_detail":                    spi_detail,
+        "term_sheet":                    term_sheet,
+        "payout_curve":                  payout_curve,
     })
 
 
@@ -268,5 +379,10 @@ def get_premium_table():
         "note": (
             "Premium rates calculated using GoI PMFBY actuarial guidelines. "
             "Commercial loading: 15% expense + 10% risk margin."
+        ),
+        "actuarial_basis": (
+            "Premiums derived from GoI PMFBY actuarial methodology — historical event "
+            "frequency × crop-stage vulnerability × sum insured. "
+            "Loading: 15% expense + 10% risk margin per standard reinsurance practice."
         ),
     })

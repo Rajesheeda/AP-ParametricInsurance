@@ -478,7 +478,7 @@ export default function Screen3_Photo({ season, selectedMandal }) {
             <div style={{
               background: "var(--bg-elevated)", borderRadius: 6, padding: 12,
               textAlign: "center", fontFamily: "monospace", fontSize: 12,
-              color: "var(--green)", border: "1px solid var(--border-bright)",
+              color: "#4ADE80", border: "1px solid var(--border-bright)",
             }}>
               Final Loss % = W_sat × Satellite + W_photo × Photo
             </div>
@@ -503,7 +503,7 @@ export default function Screen3_Photo({ season, selectedMandal }) {
                 }}>
                   <div className="label-text">{w.label}</div>
                   <div style={{
-                    fontFamily: "var(--font-display)", fontSize: 32, fontWeight: 800,
+                    fontFamily: "var(--font-display)", fontSize: 52, fontWeight: 800,
                     color: w.color, lineHeight: 1, marginTop: 4,
                   }}>
                     {w.value}
@@ -620,9 +620,9 @@ export default function Screen3_Photo({ season, selectedMandal }) {
                         label={{ value: "Prior W_photo", position: "right", fill: "rgba(22,163,74,0.5)", fontSize: 9 }} />
                       <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
                       <Line type="monotone" dataKey="w_satellite" stroke="#3B82F6"
-                        name="Satellite Weight" strokeWidth={2} dot={{ r: 4, fill: "#3B82F6" }} />
+                        name="Satellite Weight" strokeWidth={2} dot={{ r: 4, fill: "#3B82F6" }} connectNulls={true} />
                       <Line type="monotone" dataKey="w_photo" stroke="var(--green)"
-                        name="Photo Weight" strokeWidth={2} dot={{ r: 4, fill: "var(--green)" }} />
+                        name="Photo Weight" strokeWidth={2} dot={{ r: 4, fill: "var(--green)" }} connectNulls={true} />
                     </LineChart>
                   </ResponsiveContainer>
 

@@ -1,101 +1,89 @@
-Do these final 5 tasks in order. 
-Confirm each one before moving to next.
+Add an SDC-driven actionable recommendation panel to 
+Screen 1 (District Overview). This turns the Sensor 
+Divergence Coefficient into an officer-facing 
+recommendation that no satellite-only or weather-only 
+system can produce — it's the intelligence layer.
 
-TASK 1 — Wire season prop correctly
-In Screen1_Overview.jsx, Screen2_Insurance.jsx,
-Screen3_Photo.jsx:
-Verify that when TopBar season toggle changes,
-all three screens re-fetch their data with 
-the new season value.
-Test: toggle from Kharif 2023 to Kharif 2020
-on Screen 1. Mandal map colors should change
-(2020 is green/healthy, 2023 is red/stressed).
-Report what changes visually.
+CONCEPT:
+For each mandal in the selected season, the system 
+already knows: satellite loss (MODIS VCI), weather 
+loss (SPI/CDD), and crop stage. From these we derive 
+a per-mandal sensor decision. The recommendation 
+panel ranks mandals by WHERE field officers should 
+act first.
 
-TASK 2 — Wire selectedMandal across screens
-When a mandal is clicked on Screen 1 grid,
-that mandal_id is passed to Screen 2 and 3
-via App.jsx state.
-Verify: click Adoni on Screen 1, switch to
-Screen 2, confirm Adoni is pre-selected in
-mandal dropdown.
-Report if this works.
+STEP 1 — Backend: add a district recommendation endpoint.
+In routers/district.py add:
+GET /district/recommendations?season=Kharif_2023&crop=Cotton
 
-TASK 3 — Add Scale-Up Roadmap modal
-In Screen 2, add a button at the bottom 
-of the right column:
-  className="btn ghost" full width
-  Text: "View AP State Scale-Up Roadmap →"
+For each of the 27 mandals, compute:
+- satellite_loss (from real MODIS VCI, latest valid 
+  composite)
+- weather_loss (from real rainfall SPI/CDD for that 
+  mandal — use the weather_loader)
+- raw_divergence = weather_loss - satellite_loss
+- Classify each mandal into a PRIORITY tier:
+  * "PRIORITY_1_FIELD_DISPATCH" — raw_divergence > 30 
+    (satellite blind, lagged damage — automated 
+    satellite assessment will UNDER-report these, 
+    so dispatch field verification FIRST)
+  * "PRIORITY_2_MONITOR" — sensors moderately diverge 
+    (10-30)
+  * "AUTOMATED_PAYOUT_SAFE" — sensors convergent 
+    (within 10) — both agree, automated assessment 
+    reliable, no field visit needed
+  * "NON_WEATHER_REVIEW" — satellite worse than weather 
+    by >30 (possible pest/disease, not drought — 
+    flag for different review)
 
-onClick opens a modal overlay:
-  Background: rgba(0,0,0,0.8)
-  Modal box: var(--bg-card) background
-    max-width 600px, border-radius 12px
-    padding 32px, border var(--border-primary)
+Return a dict:
+- season, crop
+- mandals: list sorted by priority tier then by 
+  raw_divergence desc, each with:
+  mandal_id, mandal_name, satellite_loss, weather_loss,
+  raw_divergence, priority_tier, recommendation_text
+- summary: counts per tier
+- headline_recommendation: a one-line string like
+  "N mandals show satellite-blind lagged damage — 
+  dispatch field teams to these first; M mandals are 
+  sensor-convergent and safe for automated payout."
 
-Modal title: "AP-CropGuard — Statewide 
-Rollout Plan" in Syne 22px
+The recommendation_text per mandal:
+- PRIORITY_1: "Satellite under-reporting due to 
+  reproductive-stage lag. Dispatch field verification 
+  — automated assessment will miss this loss."
+- AUTOMATED_PAYOUT_SAFE: "Both sensors agree. 
+  Automated payout reliable. No field visit needed."
+- etc.
 
-3 phase cards inside modal:
-  Phase 1 (NOW):
-    Title: "Kurnool Pilot"
-    Timeline: "Kharif 2026"
-    Details: "27 mandals, 5 crops, 
-    2 lakh farmers"
-    Status badge: green "ACTIVE"
-    Integrations: "PMFBY Portal, APSDMA"
-    
-  Phase 2 (3 MONTHS):
-    Title: "Rayalaseema Expansion"  
-    Timeline: "Rabi 2026-27"
-    Details: "4 districts, 15 lakh farmers,
-    ₹180 Cr premium pool"
-    Status badge: amber "PLANNED"
-    Integrations: "e-Crop AP, Mee-Seva"
-    
-  Phase 3 (12 MONTHS):
-    Title: "All 26 AP Districts"
-    Timeline: "Kharif 2027"
-    Details: "26 districts, 1.2 Cr farmers,
-    estimated ₹2,400 Cr savings in 
-    manual survey costs"
-    Status badge: blue "ROADMAP"
-    Integrations: "PMFBY, APSDMA, 
-    Revenue Dept, AP Fibernet"
+STEP 2 — Frontend: add a "Field Dispatch Intelligence" 
+panel on Screen 1.
+Place it in the right column or below the mandal grid.
+Title: "Field Dispatch Recommendation"
+Subtitle: "SDC-driven officer prioritization"
 
-Close button top-right: × 
-Close on background click also.
+Show:
+- The headline_recommendation prominently at top
+- A ranked list/table of mandals grouped by priority 
+  tier:
+  PRIORITY_1_FIELD_DISPATCH — red header, list mandals
+  PRIORITY_2_MONITOR — amber
+  AUTOMATED_PAYOUT_SAFE — green
+  NON_WEATHER_REVIEW — purple
+- Each mandal row: name, satellite vs weather loss 
+  (small), and the recommendation text
+- A small caption: "This prioritization is only 
+  possible because the Sensor Divergence Coefficient 
+  identifies where satellite assessment is blind. 
+  A satellite-only system would dispatch officers 
+  uniformly or miss lagged-damage mandals entirely."
 
-TASK 4 — Add loading skeletons everywhere
-In all 3 screens, verify that when data 
-is loading, skeleton shimmer placeholders
-show instead of blank space.
-If any screen shows blank/white on load,
-add className="skeleton" placeholder divs.
-Report which screens needed fixes.
+This is the recommendation/intelligence innovation — 
+it tells officers WHERE to act, derived from the SDC.
 
-TASK 5 — Final end-to-end test
-Run full demo sequence and report:
-1. Load app → Screen 1 loads with 
-   Kharif 2023 data
-2. Click mandal "Alur" → 
-   threshold breached banner shows red
-3. Switch season to Kharif 2020 → 
-   map goes green, banner changes
-4. Navigate to Screen 2 → 
-   Alur pre-selected in dropdown
-5. Select Groundnut + Drought → 
-   move rainfall slider to 70 → 
-   confirm trigger ACTIVATED
-6. Click Calculate → term sheet appears
-7. Check backtest correlation is 
-   computed value not hardcoded
-8. Navigate to Screen 3 → 
-   upload any JPG → click Assess
-9. Click Dispute Satellite → 
-   weight chart updates
-10. Check evidence log shows submission
-
-Report pass/fail for each of the 10 steps.
-Any failures: fix immediately and re-test.
-Confirm when all 10 pass.
+After implementing, call the recommendations endpoint 
+for Kharif_2023 + Cotton and report:
+- how many mandals in each priority tier
+- the headline_recommendation text
+- confirm the panel renders on Screen 1
+Take a screenshot.

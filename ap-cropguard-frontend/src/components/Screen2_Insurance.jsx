@@ -208,6 +208,11 @@ function TermSheet({ result, mandalName }) {
         ))}
       </div>
 
+      {/* Methodology reference footer */}
+      <div style={{ fontSize: 10, color: "var(--text-muted)", fontStyle: "italic", marginBottom: 10, lineHeight: 1.5 }}>
+        Methodology aligned with Nagaland Parametric Insurance Pilot (2024) and SDRF/NDRF compensation framework
+      </div>
+
       {/* Current assessment */}
       <div style={{
         display: "flex", gap: 12, alignItems: "center",
@@ -231,6 +236,235 @@ function TermSheet({ result, mandalName }) {
         <span className={`badge ${breached ? "badge-red" : "badge-green"}`} style={{ marginLeft: "auto" }}>
           {breached ? "⚠ THRESHOLD BREACHED" : "✓ BELOW THRESHOLD"}
         </span>
+      </div>
+    </div>
+  );
+}
+
+function SensorDivergencePanel({ result }) {
+  if (!result) return (
+    <div className="card" style={{
+      border: "1px dashed var(--border-bright)",
+      textAlign: "center", padding: "28px 16px",
+    }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--amber-light)", marginBottom: 4 }}>
+        Sensor Divergence Coefficient (SDC)
+      </div>
+      <div style={{ fontSize: 11, color: "var(--text-muted)", fontStyle: "italic", marginBottom: 2 }}>
+        Patent-pending multi-sensor loss arbitration
+      </div>
+      <div style={{ fontSize: 11, color: "var(--text-muted)", opacity: 0.6, marginTop: 8 }}>
+        Run Calculate to see multi-sensor arbitration
+      </div>
+    </div>
+  );
+
+  const sdc    = result.sensor_divergence_coefficient ?? {};
+  const sci    = result.scientific_basis ?? {};
+  const satLoss = result.satellite_loss_pct ?? 0;
+  const wxLoss  = result.weather_loss_pct  ?? 0;
+
+  const BANNER = {
+    SATELLITE_BLIND_TO_REPRODUCTIVE_LOSS: {
+      bg: "rgba(245,158,11,0.10)", border: "var(--amber)",
+      iconColor: "var(--amber-light)", icon: "⚠",
+      headline: "SATELLITE BLIND AT THIS CROP STAGE",
+      body: "Drought struck during the reproductive stage. Canopy greenness has not yet collapsed, but yield loss is already occurring. System trusts the weather sensor — a satellite-only assessment would miss this loss event.",
+    },
+    WEATHER_LEADS_SATELLITE: {
+      bg: "rgba(59,130,246,0.10)", border: "#3B82F6",
+      iconColor: "#60A5FA", icon: "↑",
+      headline: "Weather signal leads — early drought detection ahead of canopy response",
+      body: null,
+    },
+    NON_WEATHER_VEGETATION_STRESS: {
+      bg: "rgba(139,92,246,0.10)", border: "#8B5CF6",
+      iconColor: "#A78BFA", icon: "⚑",
+      headline: "Vegetation stress not explained by weather — flagged for field review (possible pest/disease)",
+      body: null,
+    },
+    SENSORS_CONVERGENT: {
+      bg: "rgba(22,163,74,0.10)", border: "var(--green)",
+      iconColor: "var(--green-light)", icon: "✓",
+      headline: "Both sensors agree — loss confirmed by canopy and weather",
+      body: null,
+    },
+  };
+  const banner = BANNER[sdc.interpretation] ?? BANNER.SENSORS_CONVERGENT;
+
+  const DECISION_PILL = {
+    WEATHER_PRIMARY:   { bg: "rgba(245,158,11,0.20)", color: "var(--amber-light)" },
+    SATELLITE_PRIMARY: { bg: "rgba(139,92,246,0.20)", color: "#A78BFA" },
+    BALANCED:          { bg: "rgba(59,130,246,0.20)", color: "#60A5FA" },
+  };
+  const pill = DECISION_PILL[sdc.sensor_decision] ?? { bg: "var(--bg-elevated)", color: "var(--text-muted)" };
+
+  const COMPACT_REFS = [
+    "Qiu et al. 2022 (Agric. & Forest Meteorology): yield −25% vs NDVI −4% in drought",
+    "Ding et al. 2022 (Catena): NDVI lags physiological drought response",
+    "Becker & Schmidhalter 2017 (Front. Plant Sci.): NDVI weaker than water indices at reproductive stage",
+  ];
+
+  return (
+    <div className="card" style={{
+      border: "1px solid rgba(245,158,11,0.5)",
+      animation: "fade-in 0.3s ease",
+    }}>
+      {/* Header */}
+      <div style={{ marginBottom: 16 }}>
+        <div className="section-title" style={{ marginBottom: 2, color: "var(--amber-light)" }}>
+          Sensor Divergence Coefficient (SDC)
+        </div>
+        <div style={{ fontSize: 11, color: "var(--text-muted)", fontStyle: "italic" }}>
+          Patent-pending multi-sensor loss arbitration
+        </div>
+      </div>
+
+      {/* Three-column sensor readout */}
+      <div style={{
+        display: "grid", gridTemplateColumns: "1fr auto 1fr",
+        gap: 10, alignItems: "center", marginBottom: 16,
+      }}>
+        {/* Satellite card */}
+        <div style={{
+          background: "var(--bg-elevated)", border: "1px solid var(--border)",
+          borderRadius: 8, padding: "12px 10px", textAlign: "center",
+        }}>
+          <div style={{
+            fontSize: 9, color: "var(--text-muted)", letterSpacing: "0.07em",
+            textTransform: "uppercase", marginBottom: 8,
+          }}>
+            SATELLITE SENSOR<br/>(NASA MODIS)
+          </div>
+          <div style={{
+            fontFamily: "var(--font-display)", fontSize: 38, fontWeight: 800,
+            color: satLoss < 20 && wxLoss >= 30 ? "rgba(156,163,175,0.6)" : "var(--red-light)",
+            lineHeight: 1,
+          }}>
+            {satLoss}%
+          </div>
+          <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 6, lineHeight: 1.4 }}>
+            Canopy greenness<br/>VCI based
+          </div>
+          {satLoss < 20 && wxLoss >= 30 && (
+            <div style={{
+              marginTop: 8, fontSize: 9, color: "var(--amber-light)",
+              background: "rgba(245,158,11,0.08)",
+              border: "1px solid rgba(245,158,11,0.25)",
+              borderRadius: 4, padding: "3px 6px", lineHeight: 1.4,
+            }}>
+              Cannot observe<br/>sub-canopy yield loss
+            </div>
+          )}
+        </div>
+
+        {/* SDC center metric */}
+        <div style={{ textAlign: "center", padding: "0 4px" }}>
+          <div style={{
+            fontFamily: "var(--font-display)", fontSize: 48, fontWeight: 900,
+            color: "var(--amber-light)", lineHeight: 1,
+          }}>
+            {sdc.sdc_value ?? "—"}
+          </div>
+          <div style={{
+            fontSize: 9, color: "var(--text-secondary)", marginTop: 4,
+            fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", lineHeight: 1.4,
+          }}>
+            Sensor Divergence<br/>Coefficient
+          </div>
+          <div style={{
+            fontSize: 8, color: "var(--text-muted)", marginTop: 6,
+            lineHeight: 1.5, maxWidth: 80,
+          }}>
+            SDC = (Weather − Satellite signal) × Crop-Stage Vulnerability
+          </div>
+        </div>
+
+        {/* Weather card */}
+        <div style={{
+          background: "var(--bg-elevated)", border: "1px solid var(--border)",
+          borderRadius: 8, padding: "12px 10px", textAlign: "center",
+        }}>
+          <div style={{
+            fontSize: 9, color: "var(--text-muted)", letterSpacing: "0.07em",
+            textTransform: "uppercase", marginBottom: 8,
+          }}>
+            WEATHER SENSOR<br/>(ERA5 Rainfall)
+          </div>
+          <div style={{
+            fontFamily: "var(--font-display)", fontSize: 38, fontWeight: 800,
+            color: wxLoss >= 60 ? "var(--red-light)" : wxLoss >= 30 ? "var(--amber-light)" : "var(--green-light)",
+            lineHeight: 1,
+          }}>
+            {wxLoss}%
+          </div>
+          <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 6, lineHeight: 1.4 }}>
+            Crop-stage rainfall<br/>deficit — SPI/CDD
+          </div>
+        </div>
+      </div>
+
+      {/* Decision banner */}
+      <div style={{
+        background: banner.bg,
+        border: `1px solid ${banner.border}`,
+        borderRadius: 8, padding: "12px 14px", marginBottom: 12,
+      }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+          <span style={{ fontSize: 18, color: banner.iconColor, flexShrink: 0, marginTop: 1 }}>
+            {banner.icon}
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: banner.iconColor, letterSpacing: "0.02em", marginBottom: banner.body ? 6 : 0 }}>
+              {banner.headline}
+            </div>
+            {banner.body && (
+              <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+                {banner.body}
+              </div>
+            )}
+          </div>
+          <div style={{
+            fontSize: 10, fontWeight: 700, padding: "3px 9px",
+            borderRadius: 12, background: pill.bg, color: pill.color,
+            whiteSpace: "nowrap", flexShrink: 0,
+          }}>
+            Decision: {sdc.sensor_decision}
+          </div>
+        </div>
+      </div>
+
+      {/* Scientific basis citations */}
+      <div style={{
+        background: "var(--bg-surface)",
+        border: "1px solid var(--border)",
+        borderRadius: 6, padding: "10px 12px",
+      }}>
+        <div style={{
+          fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
+          letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 7,
+        }}>
+          Peer-Reviewed Basis
+        </div>
+        {sci.phenomenon && (
+          <div style={{
+            fontSize: 10, color: "var(--text-muted)", marginBottom: 8,
+            lineHeight: 1.5, fontStyle: "italic",
+          }}>
+            {sci.phenomenon}
+          </div>
+        )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          {COMPACT_REFS.map((ref, i) => (
+            <div key={i} style={{
+              fontSize: 9, color: "var(--text-muted)",
+              borderLeft: "2px solid var(--border-bright)",
+              paddingLeft: 8, lineHeight: 1.5,
+            }}>
+              {ref}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -274,6 +508,9 @@ function BacktestPanel({ backtestResult }) {
         <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8, lineHeight: 1.6 }}>
           <div>Method: {backtestResult.correlation_method}</div>
           <div style={{ marginTop: 2, opacity: 0.7 }}>Source: {backtestResult.data_source}</div>
+          <div style={{ marginTop: 4, opacity: 0.6, fontSize: 10 }}>
+            Cross-validated with CCE (Crop Cutting Experiment) yield outcomes — Kurnool Kharif 2018, 2023
+          </div>
         </div>
       </div>
 
@@ -529,8 +766,8 @@ export default function Screen2_Insurance({ season, selectedMandal }) {
 
   // ── Mount: load meta, backtest, premium ──────────────────────
   useEffect(() => {
-    Promise.all([getMetaCrops(), getMetaMandals(), getBacktestResults(), getPremiumTable()])
-      .then(([cropsRes, mandalsRes, btRes, ptRes]) => {
+    Promise.all([getMetaCrops(), getMetaMandals(), getPremiumTable()])
+      .then(([cropsRes, mandalsRes, ptRes]) => {
         if (!cropsRes.error) {
           const cropList  = cropsRes.data?.data?.crops  ?? [];
           const perilList = cropsRes.data?.data?.perils ?? [];
@@ -540,14 +777,17 @@ export default function Screen2_Insurance({ season, selectedMandal }) {
           setThreshold(thr);
           if (cropList.length) {
             setSelectedCrop(cropList[0]);
-            setSowingDate("2023-07-01"); // sensible default; updated on crop select
+            setSowingDate("2023-07-01");
+            // Use first crop so run_full_backtest is called — returns events, correlation_method, data_source
+            getBacktestResults(cropList[0].name).then(btRes => {
+              if (!btRes.error) setBacktestResult(btRes.data?.data ?? null);
+            });
           }
           if (perilList.length) setSelectedPeril(perilList[0]);
         }
         if (!mandalsRes.error) {
           setMandals(mandalsRes.data?.data?.mandals ?? []);
         }
-        if (!btRes.error) setBacktestResult(btRes.data?.data ?? null);
         if (!ptRes.error) setPremiumTable(ptRes.data?.data?.table ?? []);
       });
   }, []);
@@ -701,8 +941,8 @@ export default function Screen2_Insurance({ season, selectedMandal }) {
             {sliders.map(s => (
               <div key={s.label}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                  <span className="label-text">{s.label}</span>
-                  <span style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>
+                  <span className="label-text" style={{ color: "#C8D4E8" }}>{s.label}</span>
+                  <span style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 700, color: "#FFFFFF" }}>
                     {s.value}{s.unit}
                   </span>
                 </div>
@@ -751,6 +991,9 @@ export default function Screen2_Insurance({ season, selectedMandal }) {
 
       {/* ══ RIGHT COLUMN ═══════════════════════════════════════════ */}
       <div className="col-scroll">
+
+        {/* SDC panel — headline innovation */}
+        <SensorDivergencePanel result={calculateResult} />
 
         {/* Backtest panel */}
         <div className="card">

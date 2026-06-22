@@ -53,3 +53,6 @@ export const getMetaMandals = () =>
 
 export const getMetaCrops = () =>
   call(() => apiClient.get("/meta/crops"));
+
+export const getDistrictRecommendations = (season, crop = "Cotton") =>
+  call(() => apiClient.get("/district/recommendations", { params: { season, crop } }));

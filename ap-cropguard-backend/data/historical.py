@@ -1,14 +1,13 @@
 """
 AP-CropGuard — Historical NDVI Timeseries & Disaster Events
 ============================================================
-SYNTHETIC DATA NOTICE: All values in this module are
-statistically calibrated to be representative of Kurnool
-district based on published IMD rainfall records, NASA MODIS
-vegetation indices, and NCIP PMFBY district claims data.
-This PoC demonstrates methodology. Production deployment
-replaces these with live API feeds from NASA Earthdata,
-IMD gridded data portal, and NCIP portal (ncip.nic.in).
+NDVI data is sourced from real NASA MODIS MOD13Q1 16-day composites
+exported via Google Earth Engine for Kurnool district (27 mandals),
+Kharif 2020 (normal baseline) and Kharif 2023 (severe drought).
+Data files: data/satellite/kurnool_modis_{2020,2023}.csv
 """
+
+from datetime import date as _date
 
 # ---------------------------------------------------------------------------
 # CONSTANTS
@@ -223,6 +222,7 @@ DISASTER_HISTORY = [
             "Jowar":     17000,
             "Sunflower": 21000,
         },
+        "data_note": "Expenditure calibrated to published AP disaster relief patterns",
     },
     {
         "year": 2020,
@@ -244,6 +244,7 @@ DISASTER_HISTORY = [
             "Jowar":     0,
             "Sunflower": 0,
         },
+        "data_note": "Expenditure calibrated to published AP disaster relief patterns",
     },
     {
         "year": 2022,
@@ -266,6 +267,7 @@ DISASTER_HISTORY = [
             "Jowar":     12000,
             "Sunflower": 14000,
         },
+        "data_note": "Expenditure calibrated to published AP disaster relief patterns",
     },
     {
         "year": 2023,
@@ -289,6 +291,7 @@ DISASTER_HISTORY = [
             "Jowar":     15000,
             "Sunflower": 19000,
         },
+        "data_note": "Expenditure calibrated to published AP disaster relief patterns",
     },
 ]
 
@@ -296,49 +299,68 @@ DISASTER_HISTORY = [
 # ACCESS FUNCTIONS
 # ---------------------------------------------------------------------------
 
+def _baseline_idx(date_str: str) -> int:
+    """Map a MODIS composite date to the nearest BASELINE_BAND index (0–17).
+    BASELINE_BAND week 0 = July 1; each step = 7 days. Clamped to [0, 17].
+    """
+    d = _date.fromisoformat(date_str)
+    days_offset = (d - _date(d.year, 7, 1)).days
+    return max(0, min(17, round(days_offset / 7)))
+
+
 def get_ndvi_timeseries(mandal_id: str, season: str) -> dict:
     """
-    Returns full NDVI timeseries with computed VCI and NDWI for a mandal-season pair.
+    Returns NDVI timeseries with VCI and NDWI for a mandal-season pair.
 
-    VCI  = (NDVI - NDVI_5YR_MIN) / (NDVI_5YR_MAX - NDVI_5YR_MIN) * 100
-    NDWI = NDVI * 0.72  (proxy; production uses actual SWIR band)
+    Reads real NASA MODIS MOD13Q1 data via satellite_loader.
+    VCI uses per-mandal historical bounds (Kurnool-calibrated).
+    Cloud-masked composites have ndvi/vci/ndwi=None — render as chart gaps.
     """
+    from engines.satellite_loader import get_mandal_timeseries, get_mandal_ndvi_bounds
+
     if season not in WEEK_DATES:
         raise ValueError(f"Season '{season}' not available. Valid: {list(WEEK_DATES.keys())}")
-    if mandal_id not in MANDAL_NDVI:
-        raise ValueError(f"Mandal '{mandal_id}' not found.")
 
-    ndvi_series = MANDAL_NDVI[mandal_id].get(season)
-    if ndvi_series is None:
-        raise ValueError(f"No NDVI data for mandal '{mandal_id}' in season '{season}'.")
+    composites = get_mandal_timeseries(mandal_id, season)
+    if not composites:
+        raise ValueError(f"No satellite data for mandal '{mandal_id}' in season '{season}'.")
 
-    dates = WEEK_DATES[season]
+    ndvi_min, ndvi_max = get_mandal_ndvi_bounds(mandal_id)
+    ndvi_range = (ndvi_max - ndvi_min) if ndvi_max != ndvi_min else 0.67
+
     timeseries = []
-    for i, ndvi in enumerate(ndvi_series):
-        vci = round(
-            max(0.0, min(100.0,
-                (ndvi - NDVI_5YR_MIN) / (NDVI_5YR_MAX - NDVI_5YR_MIN) * 100
-            )), 1
-        )
-        ndwi = round(ndvi * 0.72, 2)
+    for comp in composites:
+        b_idx = _baseline_idx(comp["date"])
+        ndvi  = comp["ndvi"]
+
+        if ndvi is not None:
+            vci  = round(max(0.0, min(100.0, (ndvi - ndvi_min) / ndvi_range * 100)), 1)
+            ndwi = comp["ndwi"]  # real NDWI from MOD13Q1 (NIR-SWIR)/(NIR+SWIR)
+        else:
+            vci  = None
+            ndwi = None
+
         timeseries.append({
-            "week": i + 1,
-            "date": dates[i],
-            "ndvi": ndvi,
-            "vci": vci,
-            "ndwi": ndwi,
-            "baseline_upper": BASELINE_BAND["upper"][i],
-            "baseline_mean":  BASELINE_BAND["mean"][i],
-            "baseline_lower": BASELINE_BAND["lower"][i],
+            "week":           comp["composite"],
+            "date":           comp["date"],
+            "ndvi":           ndvi,
+            "vci":            vci,
+            "ndwi":           ndwi,
+            "no_data":        comp["no_data"],
+            "pixel_count":    comp["pixel_count"],
+            "cloud_quality":  comp["cloud_quality"],
+            "baseline_upper": BASELINE_BAND["upper"][b_idx],
+            "baseline_mean":  BASELINE_BAND["mean"][b_idx],
+            "baseline_lower": BASELINE_BAND["lower"][b_idx],
         })
 
     return {
-        "mandal_id": mandal_id,
-        "season": season,
-        "timeseries": timeseries,
+        "mandal_id":    mandal_id,
+        "season":       season,
+        "timeseries":   timeseries,
         "baseline_band": BASELINE_BAND,
-        "ndvi_5yr_min": NDVI_5YR_MIN,
-        "ndvi_5yr_max": NDVI_5YR_MAX,
+        "ndvi_5yr_min": ndvi_min,
+        "ndvi_5yr_max": ndvi_max,
     }
 
 
