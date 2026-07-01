@@ -452,6 +452,9 @@ export default function Screen3_Photo({ season, selectedMandal }) {
                         Consensus Loss: {consensusResult.final_loss_pct}%
                         {consensusResult.threshold_breached ? " — Relief Eligible" : ""}
                       </div>
+                      <div style={{ fontSize: 10, marginTop: 3, opacity: 0.7 }}>
+                        Satellite input uses a conservative 55% PoC placeholder.
+                      </div>
                     </div>
                   </div>
                 )}
@@ -470,7 +473,10 @@ export default function Screen3_Photo({ season, selectedMandal }) {
                 Satellite-Photo Consensus Engine
               </div>
               <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                Bayesian Fusion — RLHF Adaptive Weights
+                Sensor Fusion — Adaptive VRO Calibration
+              </div>
+              <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4, lineHeight: 1.45 }}>
+                Satellite input: conservative 55% placeholder in this PoC. Live parametric satellite loss replaces it in Phase 1.
               </div>
             </div>
 
@@ -584,7 +590,7 @@ export default function Screen3_Photo({ season, selectedMandal }) {
             {/* Weight history chart */}
             <div>
               <div style={{ marginBottom: 8 }}>
-                <div className="section-title" style={{ marginBottom: 2 }}>RLHF Weight Adaptation</div>
+                <div className="section-title" style={{ marginBottom: 2 }}>VRO Feedback Weight History</div>
                 <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
                   Per-mandal learning from VRO feedback
                 </div>

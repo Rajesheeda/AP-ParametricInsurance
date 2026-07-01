@@ -261,6 +261,8 @@ function SensorDivergencePanel({ result }) {
 
   const sdc    = result.sensor_divergence_coefficient ?? {};
   const sci    = result.scientific_basis ?? {};
+  const wts    = result.sensor_weights ?? {};
+  const wderiv = wts.derivation ?? {};
   const satLoss = result.satellite_loss_pct ?? 0;
   const wxLoss  = result.weather_loss_pct  ?? 0;
 
@@ -434,6 +436,62 @@ function SensorDivergencePanel({ result }) {
         </div>
       </div>
 
+      {/* Weight derivation — proves the fusion weights are computed, not chosen */}
+      {wts.w_satellite != null && (
+        <div style={{
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border)",
+          borderRadius: 6, padding: "10px 12px",
+        }}>
+          <div style={{
+            fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
+            letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 7,
+          }}>
+            How the weights are derived — no hand-picked numbers
+          </div>
+          <div style={{ display: "flex", gap: 16, marginBottom: 7, flexWrap: "wrap" }}>
+            <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
+              Satellite weight <b style={{ color: "var(--text-primary)" }}>{wts.w_satellite}</b>
+            </div>
+            <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
+              Weather weight <b style={{ color: "var(--text-primary)" }}>{wts.w_weather}</b>
+            </div>
+          </div>
+          <div style={{ fontSize: 9.5, color: "var(--text-muted)", lineHeight: 1.6 }}>
+            w<sub>sat</sub> ∝ cloud-free pixel reliability
+            {wderiv.satellite_reliability_pixels != null && (
+              <> (<b>{wderiv.satellite_reliability_pixels}</b>, measured from MODIS pixel count)</>
+            )} × NDVI observability at this crop stage
+            {wderiv.ndvi_observability_at_stage != null && (
+              <> (<b>{wderiv.ndvi_observability_at_stage}</b>, anchored to Qiu et al. 2022)</>
+            )}. Both terms are measured or cited — the weight is computed, not assigned.
+          </div>
+        </div>
+      )}
+
+      {/* Detection floor — honest scope of what SDC can and cannot see */}
+      <div style={{
+        background: "rgba(245,158,11,0.06)",
+        border: "1px solid rgba(245,158,11,0.35)",
+        borderRadius: 6, padding: "10px 12px",
+      }}>
+        <div style={{
+          fontSize: 10, fontWeight: 700, color: "var(--amber-light)",
+          letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 7,
+        }}>
+          Physical detection floor
+        </div>
+        <div style={{ fontSize: 9.5, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+          <b style={{ color: "var(--green-light)" }}>Effective for:</b> rainfed reproductive-stage
+          drought stress, where weather indicates loss before canopy NDVI responds.{" "}
+          <b style={{ color: "var(--text-primary)" }}>Cannot detect:</b> internal pest damage
+          (e.g. early pink bollworm inside the boll — no canopy or backscatter change), or
+          irrigated crops compensating a rainfall deficit. SDC is a late-stage divergence flag
+          that <b>triggers field verification</b> — not an early-warning detector and not a
+          replacement for ground truth.
+        </div>
+      </div>
+
       {/* Scientific basis citations */}
       <div style={{
         background: "var(--bg-surface)",
@@ -509,7 +567,7 @@ function BacktestPanel({ backtestResult }) {
           <div>Method: {backtestResult.correlation_method}</div>
           <div style={{ marginTop: 2, opacity: 0.7 }}>Source: {backtestResult.data_source}</div>
           <div style={{ marginTop: 4, opacity: 0.6, fontSize: 10 }}>
-            Cross-validated with CCE (Crop Cutting Experiment) yield outcomes — Kurnool Kharif 2018, 2023
+            Correlation computed live on model payouts vs calibrated PMFBY baseline. Mandal-level NCIP actuals pending department data-share.
           </div>
         </div>
       </div>
@@ -523,7 +581,7 @@ function BacktestPanel({ backtestResult }) {
           <Tooltip content={<CustomTooltip />} />
           <Legend wrapperStyle={{ fontSize: 11, color: "var(--text-secondary)" }} />
           <Bar dataKey="model_predicted_payout_per_ha" name="Model Predicted" fill="#3B82F6" radius={[2,2,0,0]} />
-          <Bar dataKey="actual_govt_payout_per_ha"     name="Actual PMFBY"    fill="#16A34A" radius={[2,2,0,0]} />
+          <Bar dataKey="actual_govt_payout_per_ha"     name="PMFBY Calibrated Baseline" fill="#16A34A" radius={[2,2,0,0]} />
         </BarChart>
       </ResponsiveContainer>
 
@@ -684,7 +742,7 @@ function RoadmapModal({ onClose }) {
 
         {/* Title */}
         <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700, marginBottom: 6 }}>
-          AP-CropGuard — Statewide Rollout Plan
+          AP Parametric Insurance — Statewide Rollout Plan
         </div>
         <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 24 }}>
           Government of Andhra Pradesh · Agriculture Department · Digital Agriculture Mission

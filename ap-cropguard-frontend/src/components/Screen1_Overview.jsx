@@ -491,6 +491,106 @@ function ProvenanceModal({ provenance, onClose }) {
   );
 }
 
+// ── Data Sources & Scope panel ───────────────────────────────────
+
+function DataScopePanel() {
+  const [expanded, setExpanded] = useState(false);
+
+  const rows = [
+    {
+      icon: "🛰",
+      label: "Satellite",
+      value: "NASA MODIS MOD13Q1 · 250 m · 16-day composite",
+      note: "Same dataset as NADAMS (ICAR national drought-monitor). Sentinel-1/2 → Phase 1.",
+    },
+    {
+      icon: "🌧",
+      label: "Rainfall",
+      value: "ERA5-Land Reanalysis · ECMWF · Daily",
+      note: "Rainfall-side balance only. Soil moisture / ET modelling → Phase 1.",
+    },
+    {
+      icon: "🌾",
+      label: "Crop scope",
+      value: "Rainfed Kharif · Kurnool District",
+      note: "Irrigated tracts excluded — canal water compensates rainfall deficit; SDC signal absent.",
+    },
+    {
+      icon: "📊",
+      label: "Validation",
+      value: "2 seasons · Pearson r computed live (scipy)",
+      note: "Kharif 2020 (normal) vs 2023 (drought). Expanding to 5-yr panel in Phase 1.",
+    },
+  ];
+
+  return (
+    <div className="card" style={{ border: "1px solid rgba(100,116,139,0.3)", padding: "10px 14px" }}>
+      <button
+        onClick={() => setExpanded(v => !v)}
+        style={{
+          width: "100%", background: "none", border: "none", cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: 0,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: "var(--text-muted)" }}>
+            DATA SOURCES &amp; SCOPE
+          </span>
+          <span style={{
+            fontSize: 9, fontWeight: 700, padding: "1px 5px",
+            background: "rgba(100,116,139,0.15)", color: "var(--text-muted)",
+            borderRadius: 4, letterSpacing: "0.04em",
+          }}>
+            LIMITATIONS
+          </span>
+        </div>
+        <span style={{ fontSize: 14, color: "var(--text-muted)", lineHeight: 1 }}>
+          {expanded ? "▲" : "▼"}
+        </span>
+      </button>
+
+      {expanded && (
+        <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+          {rows.map(r => (
+            <div key={r.label} style={{
+              padding: "7px 9px",
+              background: "var(--bg-elevated)",
+              borderRadius: 6,
+              borderLeft: "2px solid rgba(100,116,139,0.4)",
+            }}>
+              <div style={{ display: "flex", gap: 7, alignItems: "flex-start", marginBottom: 3 }}>
+                <span style={{ fontSize: 13, lineHeight: 1.2 }}>{r.icon}</span>
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)" }}>
+                    {r.label}:&nbsp;
+                  </span>
+                  <span style={{ fontSize: 11, color: "var(--text-primary)", fontWeight: 600 }}>
+                    {r.value}
+                  </span>
+                </div>
+              </div>
+              <div style={{ fontSize: 10, color: "var(--text-muted)", lineHeight: 1.5, paddingLeft: 20 }}>
+                {r.note}
+              </div>
+            </div>
+          ))}
+
+          <div style={{
+            fontSize: 10, color: "rgba(100,116,139,0.6)",
+            borderTop: "1px solid var(--border-subtle)", paddingTop: 7,
+            lineHeight: 1.55,
+          }}>
+            This system is a drought PoC for rainfed Kharif. Flood, heatwave, and
+            irrigated-tract modules are scoped for Phase 1. Backtest correlation is
+            computed live — not hardcoded.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Field Dispatch Recommendation panel ──────────────────────────
 
 const DISPATCH_TIERS = [
@@ -703,19 +803,20 @@ export default function Screen1_Overview({ season, selectedMandal, onMandalSelec
         {/* Stat cards */}
         <StatCards overview={overview} />
 
-        {/* APSDMA validation pill */}
+        {/* Scope pill — honest peril framing (no fabricated accuracy number) */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "center",
           padding: "6px 12px",
-          background: "var(--green-glow)",
-          border: "1px solid var(--green)",
+          background: "var(--bg-elevated)",
+          border: "1px solid var(--border-primary)",
           borderRadius: 999,
           fontSize: 11,
           fontWeight: 600,
-          color: "var(--green-light)",
+          color: "var(--text-secondary)",
           letterSpacing: "0.03em",
+          textAlign: "center",
         }}>
-          ◉ APSDMA Validated: 82.4% Flood Accuracy
+          ◉ Drought PoC · Flood mapping (Sentinel-1 SAR vs APSDMA) → Phase 1
         </div>
 
         {/* Mandal grid */}
@@ -889,14 +990,17 @@ export default function Screen1_Overview({ season, selectedMandal, onMandalSelec
                 fontSize: 12, padding: "5px 0",
                 borderBottom: "1px solid var(--border-subtle)",
               }}>
-                <span style={{ color: "var(--text-muted)" }}>Flood Map Validation</span>
-                <span style={{ color: "var(--green-light)", fontWeight: 600 }}>
-                  82.4% — vs APSDMA Kurnool 2022 Report
+                <span style={{ color: "var(--text-muted)" }}>Flood Mapping</span>
+                <span style={{ color: "var(--text-secondary)", fontWeight: 600 }}>
+                  Sentinel-1 SAR vs APSDMA — Phase 1
                 </span>
               </div>
             </div>
           )}
         </div>
+
+        {/* Data Sources & Limitations — pre-empts Murthy's resolution/scope/validation probes */}
+        <DataScopePanel />
       </div>
     </div>
   );

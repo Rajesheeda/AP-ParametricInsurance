@@ -34,7 +34,7 @@ function LiveClock() {
 }
 
 export default function TopBar({ activeScreen, season, onSeasonChange }) {
-  const title = SCREEN_TITLES[activeScreen] ?? "AP-CropGuard";
+  const title = SCREEN_TITLES[activeScreen] ?? "AP Parametric Insurance";
 
   return (
     <header className="topbar" style={{ justifyContent: "space-between" }}>

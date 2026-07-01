@@ -30,7 +30,7 @@ from engines.satellite_loader import (
     get_nearest_composite, get_mandal_ndvi_bounds, get_mandal_season_mean,
 )
 from engines.actuarial_engine import (
-    compute_weather_loss, compute_parametric_loss,
+    compute_weather_loss, compute_parametric_loss, compute_sensor_weights,
     compute_payout, build_payout_curve,
     compute_premium, build_term_sheet,
     compute_sensor_divergence_coefficient, _SCIENTIFIC_BASIS,
@@ -185,9 +185,14 @@ def post_parametric_calculate(req: CalculateRequest):
     # Weather loss (from SPI / CDD / temperature)
     weather_loss = compute_weather_loss(spi_val, cdd_val, wi.max_temp_celsius, req.peril)
 
-    # Satellite loss — real MODIS VCI for the mandal, nearest composite <= disaster_date
+    # Satellite loss — real MODIS VCI for the mandal, nearest composite <= disaster_date.
+    # satellite_reliability = cloud-free pixel fraction of that composite (measured),
+    # which DRIVES the fusion weight — no hand-picked satellite/weather split.
+    _MODIS_MAX_PIXELS = 241  # 2km-radius buffer in the GEE export grid
     sat_detail: dict = {}
-    sat_loss_source = "weather_proxy"
+    sat_loss_source = "unobserved"
+    satellite_loss = 0.0
+    satellite_reliability = 0.0  # 0 => satellite contributes nothing until observed
     try:
         composite = get_nearest_composite(req.mandal_id, req.season, req.disaster_date)
         if composite is not None:
@@ -198,12 +203,18 @@ def post_parametric_calculate(req: CalculateRequest):
             anomaly  = compute_ndvi_anomaly(composite["ndvi"], baseline_mean)
             satellite_loss = estimate_satellite_loss(vci_val, anomaly)
             sat_loss_source = "modis_vci"
+            px = composite.get("pixel_count")
+            satellite_reliability = (
+                float(min(1.0, px / _MODIS_MAX_PIXELS)) if px else 1.0
+            )
             sat_detail = {
                 "composite_date":     composite["date"],
                 "ndvi":               composite["ndvi"],
                 "evi":                composite["evi"],
                 "ndwi":               composite["ndwi"],
                 "cloud_quality":      composite["cloud_quality"],
+                "pixel_count":        px,
+                "satellite_reliability": round(satellite_reliability, 3),
                 "vci":                round(vci_val, 1),
                 "vci_status":         vci_cls["status"],
                 "ndvi_anomaly_pct":   anomaly,
@@ -211,14 +222,19 @@ def post_parametric_calculate(req: CalculateRequest):
                 "ndvi_max":           ndvi_max,
                 "baseline_mean_ndvi": round(float(baseline_mean), 4),
             }
-        else:
-            satellite_loss = weather_loss * 0.95
-            sat_loss_source = "weather_proxy_no_composite"
     except Exception:
-        satellite_loss = weather_loss * 0.95
-        sat_loss_source = "weather_proxy_fallback"
+        sat_loss_source = "unobserved"
 
-    # Divergence analysis — classify the relationship between weather and satellite signals
+    # Derived fusion weights (provable: pixel reliability x NDVI observability, Qiu 2022).
+    weights = compute_sensor_weights(satellite_reliability, kc)
+    raw_loss = (
+        weights["w_satellite"] * satellite_loss
+        + weights["w_weather"] * weather_loss
+    )
+    parametric_loss = float(min(raw_loss * kc, 100.0))
+
+    # Divergence analysis — DESCRIBES the satellite/weather relationship (the loss
+    # itself is computed by the derived weights above, not by these branches).
     signal_divergence = round(abs(satellite_loss - weather_loss), 1)
     if weather_loss >= 30.0 and satellite_loss < 20.0:
         divergence_analysis = "LAGGED_DAMAGE"
@@ -227,31 +243,26 @@ def post_parametric_calculate(req: CalculateRequest):
             "greenness (NDVI) has not yet collapsed. This is characteristic of "
             "flowering/reproductive-stage drought, where yield loss precedes visible canopy "
             "decline. Satellite-only assessment would miss this event. Parametric weather "
-            "triggers capture it."
+            "triggers capture it. NOTE: this is a late-stage divergence flag, not early "
+            "warning — it cannot see internal pest damage or irrigated-crop compensation."
         )
-        # Trust weather more: canopy lag means satellite under-represents damage
-        raw_loss = weather_loss * 0.75 + satellite_loss * 0.25
     elif weather_loss >= 30.0 and satellite_loss >= 30.0:
         divergence_analysis = "CONFIRMED_LOSS"
         divergence_message = (
             "Both weather indices and satellite vegetation confirm crop loss."
         )
-        raw_loss = satellite_loss * 0.5 + weather_loss * 0.5
     elif satellite_loss >= 30.0 and weather_loss < 20.0:
         divergence_analysis = "NON_WEATHER_STRESS"
         divergence_message = (
             "Vegetation decline not explained by weather — possible pest, disease, or "
             "non-climatic cause. Flag for field review."
         )
-        raw_loss = satellite_loss * 0.6 + weather_loss * 0.4
     else:
         divergence_analysis = "NO_SIGNIFICANT_LOSS"
         divergence_message = (
             "No significant loss signal in either weather or satellite indicators."
         )
-        raw_loss = satellite_loss * 0.6 + weather_loss * 0.4
 
-    parametric_loss = float(min(raw_loss * kc, 100.0))
     payout, threshold_breached = compute_payout(req.crop, parametric_loss)
 
     sdc = compute_sensor_divergence_coefficient(
@@ -275,6 +286,7 @@ def post_parametric_calculate(req: CalculateRequest):
         "divergence_analysis":           divergence_analysis,
         "divergence_message":            divergence_message,
         "sensor_divergence_coefficient": sdc,
+        "sensor_weights":                weights,
         "scientific_basis":              _SCIENTIFIC_BASIS,
         "sat_loss_source":               sat_loss_source,
         "satellite_detail":              sat_detail,
@@ -306,9 +318,10 @@ def post_parametric_simulate(req: SimulateRequest):
     spi_val = _compute_spi_from_deficit(req.rainfall_deficit_pct)
     cdd_val = int(req.consecutive_dry_days)
 
+    # Slider inputs are weather parameters, so this is a weather-driven what-if
+    # scenario: satellite is unobserved (reliability 0) => weight falls to weather.
     weather_loss    = compute_weather_loss(spi_val, cdd_val, req.max_temp_celsius, req.peril)
-    satellite_loss  = weather_loss * 0.95
-    parametric_loss = compute_parametric_loss(satellite_loss, weather_loss, kc)
+    parametric_loss = compute_parametric_loss(0.0, weather_loss, kc, satellite_reliability=0.0)
 
     payout, threshold_breached = compute_payout(req.crop, parametric_loss)
 

@@ -67,6 +67,9 @@ app.add_middleware(
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ],
+    # Demo-day safety: allow any localhost/127.0.0.1 port so a port conflict
+    # (e.g. backend bumped to 8010) never silently breaks the UI with CORS.
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

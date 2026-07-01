@@ -30,20 +30,31 @@ export default function Sidebar({ activeScreen, onNavigate }) {
         </div>
         <div style={{
           fontFamily: "var(--font-display)",
-          fontSize: 18,
+          fontSize: 14,
           fontWeight: 700,
           color: "var(--text-primary)",
-          lineHeight: 1.2,
-          marginBottom: 6,
+          lineHeight: 1.25,
+          marginBottom: 4,
         }}>
-          CropGuard
+          Parametric Insurance
         </div>
         <div style={{
           fontSize: 10,
           fontWeight: 500,
-          letterSpacing: "0.15em",
+          letterSpacing: "0.08em",
           textTransform: "uppercase",
           color: "var(--text-muted)",
+          marginBottom: 4,
+        }}>
+          Disaster Loss Assessment
+        </div>
+        <div style={{
+          fontSize: 9,
+          fontWeight: 400,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: "var(--text-muted)",
+          opacity: 0.6,
           marginBottom: 14,
         }}>
           Kurnool District

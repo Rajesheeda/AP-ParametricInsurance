@@ -2,8 +2,8 @@
 AP-CropGuard — Photo Crop Damage Assessment Engine
 ====================================================
 Photo crop damage assessment engine.
-Primary: Google Gemini Vision (gemini-1.5-flash,
-free tier).
+Primary: Google Gemini Vision (gemini-2.0-flash-lite,
+google-genai SDK).
 Backup: Groq LLaMA Vision (llama-4-scout, free tier).
 Fallback: Rule-based conservative estimate.
 Designed for bulletproof demo-day reliability.
@@ -14,12 +14,8 @@ import json
 import base64
 import io
 
-from PIL import Image
-import warnings
-warnings.filterwarnings("ignore", category=FutureWarning, module="google")
-warnings.filterwarnings("ignore", category=DeprecationWarning, module="google")
-
-import google.generativeai as genai
+from google import genai as _genai
+from google.genai import types as _genai_types
 from groq import Groq
 from dotenv import load_dotenv
 
@@ -32,10 +28,8 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GROQ_API_KEY   = os.getenv("GROQ_API_KEY")
 
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-
-_groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
+_gemini_client = _genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+_groq_client   = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 # ---------------------------------------------------------------------------
 # ASSESSMENT PROMPT
@@ -145,21 +139,31 @@ def parse_vision_response(response_text: str) -> dict:
 
 def assess_with_gemini(image_bytes: bytes, claimed_crop: str) -> dict:
     """
-    Assess crop damage using Google Gemini Vision (gemini-1.5-flash).
-
-    Builds a PIL Image from bytes, sends it alongside the structured
-    assessment prompt, and parses the JSON response.
-
+    Assess crop damage using Google Gemini Vision (gemini-2.0-flash-lite).
+    Uses the google-genai SDK (replaces deprecated google.generativeai).
     Raises an exception on any API or parsing failure.
     """
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    if _gemini_client is None:
+        raise RuntimeError("Gemini client not initialised — GEMINI_API_KEY missing.")
 
-    pil_image = Image.open(io.BytesIO(image_bytes))
+    if image_bytes[:3] == b"\xff\xd8\xff":
+        mime_type = "image/jpeg"
+    elif image_bytes[:4] == b"\x89PNG":
+        mime_type = "image/png"
+    else:
+        mime_type = "image/jpeg"
+
     prompt = ASSESSMENT_PROMPT + f"\n\nFarmer declared crop: {claimed_crop}"
 
-    response = model.generate_content([prompt, pil_image])
+    response = _gemini_client.models.generate_content(
+        model="gemini-2.0-flash-lite",
+        contents=[
+            _genai_types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
+            prompt,
+        ],
+    )
     result = parse_vision_response(response.text)
-    result["analysis_source"] = "Gemini Vision (gemini-1.5-flash)"
+    result["analysis_source"] = "Gemini Vision (gemini-2.0-flash-lite)"
     return result
 
 
@@ -235,30 +239,30 @@ def assess_photo(image_bytes: bytes, claimed_crop: str) -> dict:
     Main entry point for crop photo assessment.
 
     Fallback chain:
-      1. Gemini Vision (gemini-1.5-flash)  — primary
-      2. Groq LLaMA Vision (llama-4-scout) — secondary
-      3. Rule-based conservative estimate  — guaranteed fallback
+      1. Groq LLaMA Vision (llama-4-scout)     — primary (confirmed working)
+      2. Gemini Vision (gemini-2.0-flash-lite)  — secondary
+      3. Rule-based conservative estimate       — guaranteed fallback
 
     Never raises an exception. Always returns a result dict with
     a 'fallback_used' field indicating which path was taken.
     """
-    # 1. Try Gemini
-    try:
-        result = assess_with_gemini(image_bytes, claimed_crop)
-        result["fallback_used"] = None
-        print(f"[photo_engine] Assessment via Gemini Vision — crop: {claimed_crop}")
-        return result
-    except Exception as gemini_err:
-        print(f"[photo_engine] Gemini failed: {gemini_err}")
-
-    # 2. Try Groq
+    # 1. Try Groq (primary — confirmed free-tier quota available)
     try:
         result = assess_with_groq(image_bytes, claimed_crop)
-        result["fallback_used"] = "groq"
+        result["fallback_used"] = None
         print(f"[photo_engine] Assessment via Groq LLaMA — crop: {claimed_crop}")
         return result
     except Exception as groq_err:
         print(f"[photo_engine] Groq failed: {groq_err}")
+
+    # 2. Try Gemini
+    try:
+        result = assess_with_gemini(image_bytes, claimed_crop)
+        result["fallback_used"] = "gemini"
+        print(f"[photo_engine] Assessment via Gemini Vision — crop: {claimed_crop}")
+        return result
+    except Exception as gemini_err:
+        print(f"[photo_engine] Gemini failed: {gemini_err}")
 
     # 3. Rule-based fallback
     print(f"[photo_engine] Both APIs failed — using rule-based fallback for crop: {claimed_crop}")
