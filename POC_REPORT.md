@@ -149,6 +149,22 @@ The method follows the UN-SPIDER Recommended Practice for Sentinel-1 flood mappi
 
 **Satellite confirmation, seasons:** VCI < 35.
 
+**Photo verification (Module B).** Cases routed to field / photo verification are resolved with a geotagged photo, which counts as evidence only if every check passes:
+
+| Check | How |
+|---|---|
+| Geotag | GPS from the photo's EXIF; manual coordinates are accepted but marked lower trust |
+| Location | Point in pilot mandal; in YSR Kadapa, point in APAIMS parcel, compared with the claimed survey number |
+| Booking | e-Panta crop booked on that parcel for every season that can be standing on the photo date |
+| Timing | Taken between event start and 30 days after event end (policy setting) |
+| Vision | Crop seen, damage class and confidence from a zero-shot vision-language model (Gemini); **not yet validated against field truth** |
+| Crop match | Crop seen agrees with the e-Panta booking |
+
+- **Outcome:** photo confirms loss → the case can close for payment. Photo shows no damage → closed without payment.
+- **Basis-risk catch:** a photo confirming loss where the system said "no payout" is referred for field verification.
+- **Fallback rule:** the demo engine's rule-based fallback, used when no vision service answers, is never counted as evidence.
+- **Test:** a plain-colour image with a valid geotag inside parcel 24/A (Chapad) was rejected as "crop mismatch → field visit".
+
 ---
 
 ## 6. Results for the pilot mandals
