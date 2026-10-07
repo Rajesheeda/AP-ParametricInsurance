@@ -44,8 +44,20 @@
 | Exposure | `pipeline/p06_exposure.py` | Focus-crop acres per mandal (e-Panta 2025), plus YSR parcel coverage. |
 | Pilot mandals | `pipeline/p07_pilot_selection.py` | Written rule → 7 mandals: Parvathipuram, Balijipeta (Manyam); Gurazala, Sattenapalle (Palnadu); Chapad, Khajipet (YSR); Vedurukuppam (Chittoor Rabi). |
 | GEE-3 event list | `pipeline/p08_flood_event_list.py` | 22 events written into `gee/GEE3_s1_flood_events.js` (4 rainiest per district, all named cyclones, all 2026 events). |
-| GEE-1 CHIRPS areal rainfall | `gee/GEE1_chirps_mandal_daily.js` | User runs it; replaces the ERA5 point series for triggers. |
-| GEE-2 season time series | `gee/GEE2_season_timeseries.js` | User runs it: NDVI + VH/VV every 10 days per YSR parcel and per mandal cropland. |
+| Earth Engine runner | `gee_py/ee_run.py <project> <cmd>` | Runs everything from Python in project `ap-early-warning` (upload, chirps, ts, flood, modis, status, download); outputs are saved to `data/gee_out/`. The `gee/*.js` files are the earlier Code Editor versions. |
+| CHIRPS daily | `pipeline/p09_chirps_long.py` | CHIRPS mandal means 1995 – Aug 2026 (it lags about a month). Event catalogue rerun on CHIRPS: 2023 drought shows (El Niño); ERA5 instead flags 2025. |
+| Triggers & premium | `pipeline/p10_triggers.py` | WBCIS-style: FAO-56 stages × deficit/excess/dry-spell → percentile z → season stress S; trigger 1-in-5, exit 1-in-25. Burn cost about 12.5% of sum insured (7% at 1-in-10/50, 20% at 1-in-3/15). |
+| Interim validation | `pipeline/p11_validate_modis.py` | Rainfall stress vs MODIS VCI (Kogan, VCI<35): mandal-season Spearman −0.13; district-year −0.35 YSR, −0.30 Palnadu, 0 Manyam. Rainfall alone has high basis risk. |
+| Parcel cross-check | `pipeline/p12_parcel_crosscheck.py` | Michaung 2023 YSR: the standing-crop gate removed 60% of SAR-flagged parcels (harvested / Rabi land preparation); the remaining ones show no NDVI loss vs cohort, so this tests false positives, not loss. |
+| Pilot assessment | `pipeline/p13_assessment.py` | Acute: event's own trigger (CHIRPS p99 / IBTrACS) + SAR flood above the dry-control noise floor, within 72 h, on standing crops, with a paddy-planting gate → payout / field verification / none. Season: trigger + VCI<35. |
+| Dashboard | `pipeline/p14_dashboard_data.py` + `dashboard_src/index.html` | One self-contained file: `poc/data/dashboard/index.html` (open in a browser). |
+
+Flood method (current, in `ee_run.py`): VH, orbit-matched pre/post, 50 m focal median; water threshold = Otsu on a balanced sample of JRC permanent water + cropland (about −21 to −24 dB); change ≥ 3 dB drop (Clement et al. 2018); JRC permanent water, HAND > 15 m and < 8-pixel clusters masked. Radar was within 72 h for only about 8 of 20 events.
+**Positive control** (`poc/POSITIVE_CONTROL.md`, `gee_py/pc_run.py`, rule declared before running): Budameru/Krishna floods, Sep 2024, 19 mandals within 30 km of Vijayawada → PASS. Flooded cropland 5.61% vs 1.41% dry floor; 18–22% in Vijayawada Rural/Urban and Mangalagiri. The image was 265 h after the event (outside 72 h).
+Second Earth Engine project: `ap-parametricinsurance` (registered 2026-10-08; its asset root wasn't provisioned yet, so `pc_run.py direct` computes without assets).
+Report: `POC_REPORT.md` (methods, results, validation, limits, references).
+Earth Engine project `ap-early-warning` went into **restricted mode** (noncommercial quota exhausted) on 2026-10-08, so queued tasks run slowly.
+APAIMS `objectid` is not unique (8.5k duplicates); `p04` now issues a row-based `pid` for any re-upload, and current parcel outputs exclude ambiguous IDs.
 
 ## Known data limits (state these before Murthy finds them)
 - Parcel boundaries exist only for YSR (about 56% of villages). Palnadu and Manyam run at mandal/village level until cadastral is shared.

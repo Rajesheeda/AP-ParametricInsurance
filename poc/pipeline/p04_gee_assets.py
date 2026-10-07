@@ -33,7 +33,9 @@ for y in sorted(dom.year.unique()):
 cad = gpd.GeoDataFrame(pd.read_parquet(DERIVED / "ysr_cadastral_farm.parquet").pipe(
     lambda d: d.assign(geometry=gpd.GeoSeries.from_wkb(d.geometry))), crs=4326)
 p = cad[["objectid", "MANDAL_NM", "VILL_NAME", "geometry"]].merge(attrs, left_on="objectid", right_index=True)
-p = p.rename(columns={"MANDAL_NM": "mandal", "VILL_NAME": "village", "objectid": "pid"})
+# APAIMS objectid is not unique (about 8.5k duplicates): keep it as src_id, use a row-based unique pid
+p = p.rename(columns={"MANDAL_NM": "mandal", "VILL_NAME": "village", "objectid": "src_id"}).reset_index(drop=True)
+p["pid"] = p.index.astype(int)
 p["geometry"] = p.geometry.simplify(0.000005)
 p.to_file(GEE / "ysr_parcels.shp", encoding="utf-8")
 print("mandals:", len(m), " parcels:", len(p))

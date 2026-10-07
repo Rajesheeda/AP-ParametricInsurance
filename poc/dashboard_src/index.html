@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AP Parametric Insurance POC</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--bg:#f6f7f5;--card:#fff;--ink:#1d2321;--muted:#5d6763;--line:#dfe3e0;--accent:#1f6f50;
+  --pay:#1f7a4d;--pay-bg:#e3f2ea;--ver:#9a5b00;--ver-bg:#fdf0dc;--no:#5d6763;--no-bg:#eef0ee;--pend:#3b5ba5;--pend-bg:#e6ecf8;--warn:#a33a2c}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121514;--card:#1b1f1d;--ink:#e6ebe8;--muted:#9aa5a0;--line:#2c3330;--accent:#5cc497;
+  --pay:#6fd39f;--pay-bg:#173226;--ver:#f0b25a;--ver-bg:#3a2a12;--no:#a3aca8;--no-bg:#262b29;--pend:#8ea8e8;--pend-bg:#1c2540;--warn:#f08a7a}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:18px 24px 10px;border-bottom:1px solid var(--line);background:var(--card)}
+h1{margin:0;font-size:20px}h2{font-size:16px;margin:0 0 10px}h3{font-size:14px;margin:14px 0 6px}
+.sub{color:var(--muted);font-size:13px;margin-top:4px}
+nav{display:flex;gap:4px;padding:0 24px;background:var(--card);border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{border:0;background:none;padding:10px 12px;font:inherit;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+nav button.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+main{padding:18px 24px;max-width:1280px;margin:0 auto}
+.grid{display:grid;gap:14px}.g2{grid-template-columns:1.1fr 1fr}.g4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:900px){.g2,.g4{grid-template-columns:1fr}main,header{padding-left:16px;padding-right:16px}nav{padding:0 16px}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.kpi .v{font-size:24px;font-weight:650}.kpi .l{color:var(--muted);font-size:12px}
+#map{height:430px;border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:12px}td.n{text-align:right;font-variant-numeric:tabular-nums}
+.tbl{overflow-x:auto}
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.PAY{background:var(--pay-bg);color:var(--pay)}.VER{background:var(--ver-bg);color:var(--ver)}.NO{background:var(--no-bg);color:var(--no)}.PEND{background:var(--pend-bg);color:var(--pend)}
+select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);max-width:100%}
+.note{color:var(--muted);font-size:12px;margin-top:8px}.warn{color:var(--warn)}
+ul.tight{margin:6px 0;padding-left:18px}ul.tight li{margin:3px 0}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>Parametric Insurance &amp; Disaster Loss Assessment: POC</h1>
+  <div class="sub" id="hdr"></div>
+</header>
+<nav id="tabs">
+  <button data-t="ov" class="on">Overview</button>
+  <button data-t="ev">Disaster events</button>
+  <button data-t="se">Drought seasons</button>
+  <button data-t="tr">Trigger &amp; premium design</button>
+  <button data-t="va">Validation &amp; limits</button>
+</nav>
+<main>
+<section id="ov">
+  <div class="grid g4" id="kpis"></div>
+  <div class="grid g2" style="margin-top:14px">
+    <div class="card"><h2>Pilot mandals</h2><div id="map"></div><div class="note">Mandal boundaries: geoBoundaries ADM3 (open). Colour = most serious action across 2020–2026.</div></div>
+    <div class="card"><h2>How a decision is made</h2>
+      <ul class="tight">
+        <li><b>Weather trigger.</b> Acute events: the event's 3-day rainfall beats the mandal's own 99th percentile (CHIRPS 1995–2024), or a cyclone ≥34 kt passes within 150 km (IBTrACS). Seasons: the WBCIS-style season stress index crosses its 1-in-5-year trigger.</li>
+        <li><b>Satellite confirmation.</b> Acute: Sentinel-1 flooded cropland above the mandal's measured false-alarm floor, from an image within 72 h, on crops standing that day (e-Panta sowing date + FAO-56 duration). Seasons: MODIS VCI &lt; 35 (Kogan).</li>
+        <li><b>Action.</b> Both agree → <span class="tag PAY">Parametric payout</span>. One only → <span class="tag VER">Field / photo verification</span>. Neither → <span class="tag NO">No payout</span>.</li>
+        <li><b>Management-water gate.</b> Where e-Panta shows paddy being planted around the event date, SAR "flood" may be puddling water, so it cannot confirm loss on its own.</li>
+      </ul>
+      <h3>Pilot selection rule</h3>
+      <div class="note" style="margin-top:0">Eligible = at least one qualifying event 2020–2025; ranked by focus-crop acres (e-Panta 2025); YSR also needs ≥50% parcel coverage.</div>
+      <div class="tbl"><table id="pilotTbl"></table></div>
+    </div>
+  </div>
+</section>
+
+<section id="ev" class="hidden">
+  <div class="card">
+    <h2>Acute events: loss assessment per pilot mandal</h2>
+    <select id="evSel"></select>
+    <div id="evHead" class="note"></div>
+    <div class="tbl"><table id="evTbl"></table></div>
+    <div class="note">Affected acres = crop acres standing on the event date × (flooded cropland share − SAR false-alarm floor). Mandal-level flood is spread over cropland by crop area; parcel-level mapping is available in YSR Kadapa only.</div>
+  </div>
+</section>
+
+<section id="se" class="hidden">
+  <div class="card">
+    <h2>Drought seasons (Kharif 2020–2025; Rabi for Chittoor)</h2>
+    <div class="tbl"><table id="seTbl"></table></div>
+    <div class="note">Only seasons whose stress came from rainfall deficit or dry spells. VCI from MODIS MOD13Q1 over cropland, scaled per mandal 2001–2025.</div>
+  </div>
+</section>
+
+<section id="tr" class="hidden">
+  <div class="grid g2">
+    <div class="card"><h2>Trigger structure (WBCIS term-sheet form)</h2>
+      <ul class="tight">
+        <li>Crop season split into FAO-56 stages (initial, development, mid, late), starting from the median e-Panta sowing date of that crop in that mandal.</li>
+        <li>Per stage: <b>deficit</b> rainfall, <b>excess</b> (max 3-day) rainfall, <b>dry spell</b> (days &lt; 2.5 mm, IMD rainy-day threshold).</li>
+        <li>Each value → its percentile in the mandal's own 1995–2024 CHIRPS record → standard normal score (as SPI). Stage stress = worst peril; season stress = water-demand-weighted sum (FAO-56 Kc × days).</li>
+        <li>Trigger = 1-in-5-year season stress; exit = 1-in-25-year. Payout rises linearly from 0 to 100% of sum insured.</li>
+        <li>Premium = pure burn cost (mean payout 1995–2024). Insurer loading is added on top.</li>
+      </ul>
+      <div class="note">Return periods are a design choice; the sensitivity is shown below so the Department can pick.</div>
+    </div>
+    <div class="card"><h2>Burn cost by district and crop</h2><div class="tbl"><table id="burnTbl"></table></div>
+      <div class="note" id="sens"></div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h2>Season payouts in the pilot mandals, 2015–2025 (% of sum insured)</h2><div class="tbl"><table id="payTbl"></table></div></div>
+</section>
+
+<section id="va" class="hidden">
+  <div class="grid g2">
+    <div class="card"><h2>Interim validation (second sensor, not claims)</h2>
+      <div class="tbl"><table id="valTbl"></table></div>
+      <div class="note">Rainfall trigger stress vs MODIS Vegetation Condition Index. Negative Spearman = more rainfall stress, less healthy crops. POD = share of VCI-stress seasons the trigger caught; FAR = share of trigger seasons with no VCI stress.</div>
+      <h3>Reading</h3>
+      <ul class="tight" id="valRead"></ul>
+    </div>
+    <div class="card"><h2>Positive control: does the flood detector see real floods?</h2><div id="pc"></div>
+      <h2 style="margin-top:16px">Parcel-level cross-check</h2><div id="cross"></div>
+      <h3>72-hour window</h3><div id="sev"></div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h2>Known limits (stated up front)</h2>
+    <ul class="tight">
+      <li><b>No PMFBY claims or CCE yields yet.</b> The ≥75% correlation criterion cannot be tested until the Crop Insurance Section shares them (requested). Everything on this page is labelled interim.</li>
+      <li>Parcel boundaries exist for YSR Kadapa only (about 56% of villages); 8.5k APAIMS polygons share an ID and are excluded from parcel analysis.</li>
+      <li>Sentinel-1 had a 12-day repeat in 2022–2024 (one satellite); the 72-hour window is met by radar alone in under half the events.</li>
+      <li>SAR cannot tell disaster flooding from paddy puddling; the e-Panta planting-window gate sends those cases to field verification.</li>
+      <li>CHIRPS is published about a month late; September 2026 events use ERA5 and are marked provisional.</li>
+      <li>Irrigation source is unknown for about 70% of YSR acreage, so rainfall triggers also run over some irrigated land.</li>
+    </ul>
+  </div>
+</section>
+</main>
+<script src="data.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const D = window.POC, $ = s => document.querySelector(s);
+const fmt = (v, d = 0) => v == null ? "–" : Number(v).toLocaleString("en-IN", {maximumFractionDigits: d, minimumFractionDigits: d});
+const cls = a => !a ? "NO" : a.startsWith("PARAMETRIC") ? "PAY" : a.startsWith("FIELD") ? "VER" : a.startsWith("PENDING") ? "PEND" : "NO";
+const label = a => ({PAY: "Parametric payout", VER: "Field / photo verification", NO: "No payout", PEND: "Pending (season open)"})[cls(a)];
+const tag = a => `<span class="tag ${cls(a)}">${label(a)}</span>`;
+const rank = {PAY: 3, VER: 2, PEND: 1, NO: 0};
+const peril = t => (t || "").split("+").map(x => ({extreme_rain: "Heavy rain", unseasonal_rain: "Unseasonal rain", cyclone: "Cyclone"})[x] || x).join(" + ");
+const cyc = c => c ? "Cyclone " + c.split(":")[0].replace("UNNAMED", "(unnamed system)") : "";
+
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll("main section").forEach(s => s.classList.toggle("hidden", s.id !== b.dataset.t));
+  if (b.dataset.t === "ov" && window._map) setTimeout(() => _map.invalidateSize(), 50);
+});
+
+$("#hdr").textContent = `Kharif: Palnadu, YSR Kadapa, Parvathipuram Manyam · Rabi: Chittoor (proposed in place of East Godavari) · ${D.pilot.length} pilot mandals · data as of ${D.generated}`;
+
+// KPIs
+const acute = D.assessment.filter(r => r.kind === "acute"), season = D.assessment.filter(r => r.kind === "season");
+const kp = [
+  [D.pilot.length, "pilot mandals (rule-based selection)"],
+  [D.events.length, "disaster events assessed, 2020–2026"],
+  [`${D.seventy_two.within}/${D.seventy_two.events}`, "events with a radar image inside 72 h"],
+  [acute.filter(r => cls(r.action) === "PAY").length + season.filter(r => cls(r.action) === "PAY").length, "mandal-crop cases where trigger and satellite agree"],
+];
+$("#kpis").innerHTML = kp.map(([v, l]) => `<div class="card kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+
+// Pilot table
+$("#pilotTbl").innerHTML = "<tr><th>District</th><th>Season</th><th>Mandal</th><th class='n'>Focus-crop acres</th><th class='n'>Events</th><th class='n'>Parcel cover</th></tr>" +
+  D.pilot.map(p => `<tr><td>${D.districts[p.district_code]}</td><td>${p.season}</td><td>${p.adm3_name}</td><td class="n">${fmt(p.focus_ac)}</td><td class="n">${p.n_events}</td><td class="n">${p.parcel_cov == null ? "–" : fmt(100 * p.parcel_cov) + "%"}</td></tr>`).join("");
+
+// Map
+const worst = {};
+D.assessment.forEach(r => { const k = cls(r.action); if ((rank[k] ?? -1) > (rank[worst[r.mandal]] ?? -1)) worst[r.mandal] = k; });
+const colour = {PAY: "#1f7a4d", VER: "#d08a1d", PEND: "#3b5ba5", NO: "#8a938f"};
+try {
+  window._map = L.map("map", {scrollWheelZoom: false});
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {attribution: "© OpenStreetMap"}).addTo(_map);
+  const lay = L.geoJSON(D.mandals, {style: f => ({color: "#333", weight: 1, fillColor: colour[worst[f.properties.adm3_name]] || "#8a938f", fillOpacity: .55}),
+    onEachFeature: (f, l) => l.bindTooltip(`${f.properties.adm3_name} (${D.districts[f.properties.district_code]})<br>${label(worst[f.properties.adm3_name] === "PAY" ? "PARAMETRIC" : worst[f.properties.adm3_name] === "VER" ? "FIELD" : worst[f.properties.adm3_name] === "PEND" ? "PENDING" : "NO")}`)}).addTo(_map);
+  _map.fitBounds(lay.getBounds(), {padding: [10, 10]});
+} catch (e) { $("#map").innerHTML = "<div class='note'>Map library unavailable offline; tables below still work.</div>"; }
+
+// Events
+const evs = [...new Set(acute.map(r => r.event_id))];
+const evMeta = Object.fromEntries(D.events.map(e => [e.id, e]));
+$("#evSel").innerHTML = evs.map(id => { const e = evMeta[id] || {}; return `<option value="${id}">${e.start} · ${D.districts[e.district_code]} · ${e.cyclone ? cyc(e.cyclone) : peril(e.types)}</option>`; }).join("");
+function showEvent(id) {
+  const e = evMeta[id] || {}, rows = acute.filter(r => r.event_id === id);
+  const h = e.hours;
+  $("#evHead").innerHTML = `Radar image after event: <b>${e.post || "–"}</b> (${fmt(h)} h after the event ended) ${h <= 72 ? '<span class="tag PAY">inside 72 h</span>' : '<span class="tag VER">outside 72 h: cannot confirm on its own</span>'} · Otsu water threshold ${fmt(e.t_post, 1)} dB · orbit-matched pre-image: ${e.orbit_matched ? "yes" : "no"}`;
+  $("#evTbl").innerHTML = "<tr><th>Mandal</th><th>Crop</th><th class='n'>3-day rain (mm)</th><th class='n'>Return period (yr)</th><th>Cyclone</th><th class='n'>Standing acres</th><th class='n'>Flooded cropland</th><th class='n'>SAR noise floor</th><th>Planting window</th><th class='n'>Affected acres (est.)</th><th>Action</th></tr>" +
+    rows.map(r => `<tr><td>${r.mandal}</td><td>${r.crop}</td><td class="n">${fmt(r.rain_3day_mm)}${r.rain_source && r.rain_source.startsWith("ERA5") ? "*" : ""}</td><td class="n">${fmt(r.return_period_yr, 1)}</td><td>${r.cyclone ? "yes" : "no"}</td><td class="n">${fmt(r.standing_acres)}</td><td class="n">${fmt(r.flood_share_pct, 2)}%</td><td class="n">${r.sar_noise_floor_pct == null ? "pending" : fmt(r.sar_noise_floor_pct, 2) + "%"}</td><td>${r.paddy_planting_window ? '<span class="warn">paddy being planted</span>' : "no"}</td><td class="n">${fmt(r.affected_acres_est, 1)}</td><td>${tag(r.action)}</td></tr>`).join("") +
+    (rows.some(r => r.rain_source && r.rain_source.startsWith("ERA5")) ? "<tr><td colspan='11' class='note'>* ERA5, provisional: CHIRPS not yet published for these days.</td></tr>" : "");
+}
+$("#evSel").onchange = e => showEvent(e.target.value); if (evs.length) showEvent(evs[0]);
+
+// Seasons
+$("#seTbl").innerHTML = "<tr><th>Season</th><th>Mandal</th><th>Crop</th><th>What drove it</th><th class='n'>Rainfall payout</th><th class='n'>VCI</th><th>Action</th></tr>" +
+  season.filter(r => cls(r.action) !== "NO").map(r => `<tr><td>${r.start.slice(0, 4)}</td><td>${r.mandal}</td><td>${r.crop}</td><td>${r.phase_driver}</td><td class="n">${fmt(r.season_payout_pct, 1)}%</td><td class="n">${fmt(r.vci)}</td><td>${tag(r.action)}</td></tr>`).join("") +
+  `<tr><td colspan="7" class="note">${season.filter(r => cls(r.action) === "NO").length} other pilot mandal-crop seasons: no trigger and no satellite stress → no payout.</td></tr>`;
+
+// Burn
+$("#burnTbl").innerHTML = "<tr><th>District</th><th>Crop</th><th class='n'>Burn cost (% SI)</th><th class='n'>Payout frequency</th></tr>" +
+  D.burn.map(b => `<tr><td>${D.districts[b.district_code]}</td><td>${b.crop}</td><td class="n">${fmt(b.burn_cost_pct, 1)}</td><td class="n">${fmt(100 * b.payout_freq)}%</td></tr>`).join("");
+$("#sens").textContent = "Sensitivity (all mandals): trigger/exit 1-in-3/1-in-15 → about 20% burn cost; 1-in-5/1-in-25 → about 12.5%; 1-in-10/1-in-50 → about 7%.";
+
+// Pilot payouts pivot
+const yrs = [...new Set(D.pilot_payouts.map(r => r.year))].sort();
+const keys = [...new Set(D.pilot_payouts.map(r => r.adm3_name + "|" + r.crop))];
+$("#payTbl").innerHTML = `<tr><th>Mandal</th><th>Crop</th>${yrs.map(y => `<th class='n'>${y}</th>`).join("")}</tr>` + keys.map(k => {
+  const [m, c] = k.split("|");
+  return `<tr><td>${m}</td><td>${c}</td>${yrs.map(y => { const r = D.pilot_payouts.find(x => x.adm3_name === m && x.crop === c && x.year === y);
+    return `<td class="n" title="${r ? r.driver_peril + " in " + r.driver_phase + " stage" : ""}">${r && r.pay_pct > 0 ? `<b>${fmt(r.pay_pct)}</b>` : r ? "0" : "–"}</td>`; }).join("")}</tr>`;
+}).join("");
+
+// Validation
+$("#valTbl").innerHTML = "<tr><th>Scope</th><th>Level</th><th class='n'>n</th><th class='n'>Spearman</th><th class='n'>p</th><th class='n'>POD</th><th class='n'>FAR</th></tr>" +
+  D.validation.map(v => `<tr><td>${v.scope}</td><td>${v.level}</td><td class="n">${v.n}</td><td class="n">${fmt(v.spearman, 2)}</td><td class="n">${v.p < 0.001 ? "&lt;0.001" : fmt(v.p, 2)}</td><td class="n">${v.pod == null ? "–" : fmt(v.pod, 2)}</td><td class="n">${v.far == null ? "–" : fmt(v.far, 2)}</td></tr>`).join("");
+$("#valRead").innerHTML = [
+  "The direction is right everywhere (more rainfall stress, lower VCI) but agreement at single mandal-season level is weak. That is the known basis risk of rainfall-only insurance, and the reason payouts here need a second sensor.",
+  "At district-year scale agreement is moderate in the drought districts (YSR Kadapa, Palnadu) and absent in Parvathipuram Manyam, where the peril is flood on largely irrigated paddy, not rainfall deficit.",
+  "None of this is the ≥75% criterion: that compares triggers with actual losses (claims, CCE), which have been requested from the Department.",
+].map(s => `<li>${s}</li>`).join("");
+const c = D.crosscheck;
+$("#cross").innerHTML = `<div class="note" style="margin-top:0">${c.event}: ${fmt(c.parcels)} e-Panta parcels with a single dominant crop, cohort = same crop × same sowing fortnight.</div>
+<ul class="tight"><li>Sentinel-1 flagged <b>${fmt(c.flagged)}</b> parcels as flooded.</li>
+<li>The standing-crop gate (e-Panta sowing date + FAO-56 duration) removed <b>${fmt(c.gated_out)}</b> (${fmt(100 * c.gated_out / c.flagged)}%): already harvested or not yet sown, mostly canal-irrigated fields being prepared for Rabi paddy.</li>
+<li>The <b>${fmt(c.standing)}</b> flagged parcels with a standing crop showed <b>no greenness loss</b> against their cohort (median NDVI change ${fmt(c.anom_flagged_standing, 2)} vs ${fmt(c.anom_unflagged, 2)}). Michaung's main damage was further east; this event tests false positives, not loss detection.</li></ul>`;
+const P = D.positive_control;
+$("#pc").innerHTML = !P ? "<div class='note'>Pending.</div>" : `<div class="note" style="margin-top:0">Budameru / Krishna floods, 31 Aug – 2 Sep 2024; 19 mandals within 30 km of Vijayawada. Event, area and pass rule were fixed before running; the method is identical to the pilot runs.</div>
+<p style="margin:6px 0">Flooded cropland <b>${fmt(P.event_share, 2)}%</b> vs dry-control floor <b>${fmt(P.ctrl_share, 2)}%</b> → <span class="tag PAY">PASS</span></p>
+<div class="tbl"><table><tr><th>Mandal</th><th class="n">km from Vijayawada</th><th class="n">Flooded cropland</th><th class="n">Dry control</th></tr>${P.units.map(u => `<tr><td>${u.unit}</td><td class="n">${fmt(u.dist_km, 1)}</td><td class="n">${fmt(u.share, 1)}%</td><td class="n">${fmt(u.ctrl, 1)}%</td></tr>`).join("")}</table></div>
+<div class="note">First orbit-matched radar image: ${P.post} (${fmt(P.hours)} h after the rain): the flood was still standing, but this is outside 72 h.</div>`;
+$("#sev").innerHTML = `<p style="margin:0">Sentinel-1 delivered a post-event image within 72 h for <b>${D.seventy_two.within} of ${D.seventy_two.events}</b> events. A 72-hour decision therefore relies on the daily rainfall trigger plus any radar or optical image available, and every result carries its image date. Where no image arrives in time, the case goes to field and photo verification instead of waiting.</p>`;
+</script>
+</body>
+</html>

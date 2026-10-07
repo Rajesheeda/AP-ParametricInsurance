@@ -1,0 +1,105 @@
+"""Build the POC dashboard: one self-contained HTML file with the data embedded (mandal-level aggregates only).
+Output goes to poc/data/dashboard/ (gitignored: derived from department data)."""
+import glob
+import json
+
+import geopandas as gpd
+import numpy as np
+import pandas as pd
+from scipy.stats import spearmanr
+
+from common import DERIVED, POC
+
+OUT = POC / "data" / "dashboard"
+OUT.mkdir(parents=True, exist_ok=True)
+DIST = {"22": "Palnadu", "11": "YSR Kadapa", "14": "Parvathipuram Manyam", "10": "Chittoor"}
+
+
+def clean(o):
+    if isinstance(o, dict):
+        return {k: clean(v) for k, v in o.items()}
+    if isinstance(o, list):
+        return [clean(v) for v in o]
+    if isinstance(o, (np.floating, float)):
+        return None if np.isnan(o) else round(float(o), 3)
+    if isinstance(o, (np.integer,)):
+        return int(o)
+    if isinstance(o, (np.bool_,)):
+        return bool(o)
+    if isinstance(o, (pd.Timestamp,)):
+        return str(o.date())
+    return o
+
+
+pil = pd.read_csv(DERIVED / "pilot_mandals.csv", dtype={"district_code": str})
+geo = gpd.read_file(DERIVED / "poc_mandals.geojson")
+geo = geo[geo.adm3_id.isin(pil.adm3_id)].drop_duplicates("adm3_id")
+geo["geometry"] = geo.geometry.simplify(0.002)
+mandals = json.loads(geo[["adm3_id", "adm3_name", "district_code", "geometry"]].to_json())
+
+a = pd.read_csv(DERIVED / "assessment_pilot.csv", dtype={"district_code": str})
+ev = pd.read_csv(DERIVED / "flood_events_gee3.csv", dtype={"district_code": str})
+fl = pd.concat([pd.read_parquet(f) for f in glob.glob(str(POC / "data" / "gee_out" / "out_flood_mandal_*.parquet"))])
+fl = fl[~fl.event_id.str.startswith("CTRL_")]
+fe = fl.groupby("event_id").agg(post=("post_image_time", "first"), hours=("hours_after_event_end", "first"),
+                                orbit_matched=("orbit_matched", "first"), t_post=("t_post_db", "first"),
+                                flood_ha=("crop_flood_ha", "sum"), crop_ha=("cropland_ha", "sum")).reset_index()
+fe["within_72h"] = fe.hours <= 72
+
+trig = pd.read_parquet(DERIVED / "trigger_annual_payouts.parquet")
+burn = (trig[trig.year.between(1995, 2024)].groupby(["district_code", "crop"]).agg(
+    burn_cost_pct=("pay_pct", "mean"), payout_freq=("pay_pct", lambda s: (s > 0).mean())).reset_index())
+pilot_pay = trig[trig.adm3_id.isin(pil.adm3_id) & (trig.year >= 2015)].merge(pil[["adm3_id", "adm3_name"]], on="adm3_id")
+
+val = pd.read_csv(DERIVED / "validation_trigger_vs_vci.csv", dtype={"dist": str})
+vstats = []
+for label, df in [("All Kharif seasons", val), ("Deficit / dry-spell driven", val[val.driver.isin(["deficit", "dry"])])]:
+    rho, p = spearmanr(df.S, df.vci)
+    fired, stressed = df.pay > 0, df.vci < 35
+    vstats.append(dict(scope=label, level="mandal-season", n=len(df), spearman=rho, p=p,
+                       pod=(fired & stressed).sum() / max(1, stressed.sum()), far=(fired & ~stressed).sum() / max(1, fired.sum())))
+dy = val.groupby(["dist", "year"]).agg(S=("S", "mean"), vci=("vci", "mean")).reset_index()
+for d, sub in dy.groupby("dist"):
+    rho, p = spearmanr(sub.S, sub.vci)
+    vstats.append(dict(scope=DIST.get(d, d), level="district-year", n=len(sub), spearman=rho, p=p, pod=None, far=None))
+
+cross = pd.read_parquet(DERIVED / "crosscheck_michaung_2023.parquet")
+flagged = cross[cross.flood_frac > 0]
+crosscheck = dict(event="Cyclone Michaung, YSR Kadapa, Dec 2023", parcels=len(cross), flagged=len(flagged),
+                  standing=int(flagged.standing.sum()), gated_out=int((~flagged.standing).sum()),
+                  anom_flagged_standing=float(flagged[flagged.standing].anom.median()),
+                  anom_unflagged=float(cross[cross.flood_frac == 0].anom.median()))
+
+pc = None
+pcf = sorted(glob.glob(str(POC / "data" / "gee_out" / "out_PC_*.parquet")))
+if len(pcf) == 3:
+    d = pd.concat([pd.read_parquet(f) for f in pcf])
+    d["share"] = 100 * d.crop_flood_ha / d.cropland_ha
+    evd = d[d.event_id == "PC_BUDAMERU_2024"].copy()
+    ctl = d[d.event_id != "PC_BUDAMERU_2024"]
+    evd["ctrl"] = evd.unit.map(ctl.groupby("unit").share.max())
+    pc = dict(event_share=100 * evd.crop_flood_ha.sum() / evd.cropland_ha.sum(),
+              ctrl_share=max(100 * g.crop_flood_ha.sum() / g.cropland_ha.sum() for _, g in ctl.groupby("event_id")),
+              post=evd.post_image_time.iloc[0], hours=float(evd.hours_after_event_end.iloc[0]),
+              units=evd.sort_values("share", ascending=False)[["unit", "dist_km", "share", "ctrl"]].head(6).to_dict("records"))
+
+data = dict(
+    positive_control=pc,
+    generated=str(pd.Timestamp.now().date()),
+    districts=DIST,
+    pilot=pil[["district_code", "season", "adm3_name", "adm3_id", "focus_ac", "n_events", "parcel_cov"]].to_dict("records"),
+    mandals=mandals,
+    events=ev[["id", "district_code", "start", "end", "types", "cyclone"]].merge(fe, left_on="id", right_on="event_id", how="left").to_dict("records"),
+    assessment=a.replace({np.nan: None}).to_dict("records"),
+    burn=burn.to_dict("records"),
+    pilot_payouts=pilot_pay[["adm3_name", "crop", "year", "S", "pay_pct", "driver_peril", "driver_phase"]].to_dict("records"),
+    validation=vstats,
+    crosscheck=crosscheck,
+    seventy_two=dict(events=len(fe), within=int(fe.within_72h.sum())),
+)
+# one self-contained file: the data is embedded where the template loads data.js
+html = (POC / "dashboard_src" / "index.html").read_text(encoding="utf-8")
+payload = json.dumps(clean(data), ensure_ascii=False).replace("</", "<\\/")
+html = html.replace('<script src="data.js"></script>', f"<script>window.POC = {payload};</script>")
+(OUT / "index.html").write_text(html, encoding="utf-8")
+print("dashboard written:", OUT / "index.html", f"({(OUT / 'index.html').stat().st_size / 1024:.0f} KB)")
