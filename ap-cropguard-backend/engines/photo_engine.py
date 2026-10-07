@@ -27,6 +27,7 @@ load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GROQ_API_KEY   = os.getenv("GROQ_API_KEY")
+GEMINI_MODEL   = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 
 _gemini_client = _genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 _groq_client   = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
@@ -139,7 +140,7 @@ def parse_vision_response(response_text: str) -> dict:
 
 def assess_with_gemini(image_bytes: bytes, claimed_crop: str) -> dict:
     """
-    Assess crop damage using Google Gemini Vision (gemini-2.0-flash-lite).
+    Assess crop damage using Google Gemini Vision (model from GEMINI_MODEL).
     Uses the google-genai SDK (replaces deprecated google.generativeai).
     Raises an exception on any API or parsing failure.
     """
@@ -156,14 +157,14 @@ def assess_with_gemini(image_bytes: bytes, claimed_crop: str) -> dict:
     prompt = ASSESSMENT_PROMPT + f"\n\nFarmer declared crop: {claimed_crop}"
 
     response = _gemini_client.models.generate_content(
-        model="gemini-2.0-flash-lite",
+        model=GEMINI_MODEL,
         contents=[
             _genai_types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
             prompt,
         ],
     )
     result = parse_vision_response(response.text)
-    result["analysis_source"] = "Gemini Vision (gemini-2.0-flash-lite)"
+    result["analysis_source"] = f"Gemini Vision ({GEMINI_MODEL})"
     return result
 
 
@@ -240,7 +241,7 @@ def assess_photo(image_bytes: bytes, claimed_crop: str) -> dict:
 
     Fallback chain:
       1. Groq LLaMA Vision (llama-4-scout)     — primary (confirmed working)
-      2. Gemini Vision (gemini-2.0-flash-lite)  — secondary
+      2. Gemini Vision (GEMINI_MODEL)           — secondary
       3. Rule-based conservative estimate       — guaranteed fallback
 
     Never raises an exception. Always returns a result dict with

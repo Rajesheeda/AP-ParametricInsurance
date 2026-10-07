@@ -50,7 +50,8 @@
 | Interim validation | `pipeline/p11_validate_modis.py` | Rainfall stress vs MODIS VCI (Kogan, VCI<35): mandal-season Spearman −0.13; district-year −0.35 YSR, −0.30 Palnadu, 0 Manyam. Rainfall alone has high basis risk. |
 | Parcel cross-check | `pipeline/p12_parcel_crosscheck.py` | Michaung 2023 YSR: the standing-crop gate removed 60% of SAR-flagged parcels (harvested / Rabi land preparation); the remaining ones show no NDVI loss vs cohort, so this tests false positives, not loss. |
 | Pilot assessment | `pipeline/p13_assessment.py` | Acute: event's own trigger (CHIRPS p99 / IBTrACS) + SAR flood above the dry-control noise floor, within 72 h, on standing crops, with a paddy-planting gate → payout / field verification / none. Season: trigger + VCI<35. |
-| Dashboard | `pipeline/p14_dashboard_data.py` + `dashboard_src/index.html` | One self-contained file: `poc/data/dashboard/index.html` (open in a browser). |
+| Dashboard | `pipeline/p14_dashboard_data.py` + `dashboard_src/index.html` | One self-contained file: `poc/data/dashboard/index.html`. Opened via the backend at `http://127.0.0.1:8010/poc/` it also has the photo tab. |
+| Photo verification (Module B) | `poc/photo/verify.py`, `ap-cropguard-backend/routers/poc_photo.py` | `POST /api/v1/poc/photo/verify`, `GET /api/v1/poc/photo/log`. Checks EXIF geotag, pilot mandal, YSR cadastral parcel and survey number, e-Panta booking (all seasons standing on that date), timing vs event, vision crop/damage, crop match → verdict + case resolution (incl. basis-risk catch). The demo engine's rule-based fallback is **never** counted as evidence. Log: `poc/data/photo_evidence.jsonl`. |
 
 Flood method (current, in `ee_run.py`): VH, orbit-matched pre/post, 50 m focal median; water threshold = Otsu on a balanced sample of JRC permanent water + cropland (about −21 to −24 dB); change ≥ 3 dB drop (Clement et al. 2018); JRC permanent water, HAND > 15 m and < 8-pixel clusters masked. Radar was within 72 h for only about 8 of 20 events.
 **Positive control** (`poc/POSITIVE_CONTROL.md`, `gee_py/pc_run.py`, rule declared before running): Budameru/Krishna floods, Sep 2024, 19 mandals within 30 km of Vijayawada → PASS. Flooded cropland 5.61% vs 1.41% dry floor; 18–22% in Vijayawada Rural/Urban and Mangalagiri. The image was 265 h after the event (outside 72 h).
@@ -75,7 +76,8 @@ APAIMS `objectid` is not unique (8.5k duplicates); `p04` now issues a row-based 
 
 ## Environment
 - Python: `py -3.13` (plain `python` is not on PATH). Libraries: geopandas, rapidfuzz, indic-transliteration, earthengine-api (this machine is not signed in to Earth Engine; the user runs GEE scripts in the Code Editor).
-- The demo app in `ap-cropguard-backend/` (port 8010) and `ap-cropguard-frontend/` (port 5173) is still intact and will be reworked for the POC.
+- Start the backend with the `poc-backend` entry in `.claude/launch.json` (uvicorn on 127.0.0.1:8010), then open `http://127.0.0.1:8010/poc/`.
+- Vision: Groq key in `.env` was invalid on 2026-10-08 (401); Gemini works with `GEMINI_MODEL` (default `gemini-3.5-flash-lite`). The old Kurnool demo screens in `ap-cropguard-frontend/` are unchanged.
 
 ## Shared department data (C:\AP-Agri-Common)
 

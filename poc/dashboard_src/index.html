@@ -28,6 +28,9 @@ th{color:var(--muted);font-weight:600;font-size:12px}td.n{text-align:right;font-
 .tbl{overflow-x:auto}
 .tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
 .PAY{background:var(--pay-bg);color:var(--pay)}.VER{background:var(--ver-bg);color:var(--ver)}.NO{background:var(--no-bg);color:var(--no)}.PEND{background:var(--pend-bg);color:var(--pend)}
+input{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);max-width:100%}
+button[type=submit]{font:inherit;padding:7px 14px;border:0;border-radius:6px;background:var(--accent);color:#fff;cursor:pointer}
+button[disabled]{opacity:.5;cursor:not-allowed}
 select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);max-width:100%}
 .note{color:var(--muted);font-size:12px;margin-top:8px}.warn{color:var(--warn)}
 ul.tight{margin:6px 0;padding-left:18px}ul.tight li{margin:3px 0}
@@ -44,6 +47,7 @@ ul.tight{margin:6px 0;padding-left:18px}ul.tight li{margin:3px 0}
   <button data-t="ev">Disaster events</button>
   <button data-t="se">Drought seasons</button>
   <button data-t="tr">Trigger &amp; premium design</button>
+  <button data-t="ph">Photo verification</button>
   <button data-t="va">Validation &amp; limits</button>
 </nav>
 <main>
@@ -99,6 +103,26 @@ ul.tight{margin:6px 0;padding-left:18px}ul.tight li{margin:3px 0}
       <div class="note" id="sens"></div></div>
   </div>
   <div class="card" style="margin-top:14px"><h2>Season payouts in the pilot mandals, 2015–2025 (% of sum insured)</h2><div class="tbl"><table id="payTbl"></table></div></div>
+</section>
+
+<section id="ph" class="hidden">
+  <div class="grid g2">
+    <div class="card"><h2>Submit a field photo</h2>
+      <div id="phOffline" class="note warn hidden">Photo verification needs the backend. Start it and open this page at <b>http://127.0.0.1:8010/poc/</b>.</div>
+      <form id="phForm">
+        <p><label>Photo (JPEG/PNG, geotagged)<br><input type="file" name="file" accept="image/jpeg,image/png" required></label></p>
+        <p><label>Event<br><select name="event_id" id="phEvent"><option value="">(none)</option></select></label></p>
+        <p><label>Claimed survey number (optional)<br><input name="claimed_survey" placeholder="e.g. 24/A"></label></p>
+        <p><label>Claimed crop (optional)<br><input name="claimed_crop" placeholder="e.g. Paddy"></label></p>
+        <details><summary class="note">No GPS in the photo? Enter coordinates (marked lower trust)</summary>
+          <p><input name="lat" placeholder="latitude"> <input name="lon" placeholder="longitude"> <input name="taken" placeholder="taken (YYYY-MM-DD HH:MM)"></p></details>
+        <p><button type="submit">Verify photo</button> <span id="phBusy" class="note"></span></p>
+      </form>
+      <div class="note">Checks: EXIF geotag · pilot mandal · cadastral parcel and survey number (YSR Kadapa) · e-Panta booking · timing vs event · vision model (zero-shot vision-language model, not a validated classifier) · crop seen vs booked.</div>
+    </div>
+    <div class="card"><h2>Result</h2><div id="phOut" class="note">No photo verified yet.</div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h2>Evidence log</h2><div class="tbl"><table id="phLog"></table></div></div>
 </section>
 
 <section id="va" class="hidden">
@@ -222,6 +246,42 @@ $("#pc").innerHTML = !P ? "<div class='note'>Pending.</div>" : `<div class="note
 <p style="margin:6px 0">Flooded cropland <b>${fmt(P.event_share, 2)}%</b> vs dry-control floor <b>${fmt(P.ctrl_share, 2)}%</b> → <span class="tag PAY">PASS</span></p>
 <div class="tbl"><table><tr><th>Mandal</th><th class="n">km from Vijayawada</th><th class="n">Flooded cropland</th><th class="n">Dry control</th></tr>${P.units.map(u => `<tr><td>${u.unit}</td><td class="n">${fmt(u.dist_km, 1)}</td><td class="n">${fmt(u.share, 1)}%</td><td class="n">${fmt(u.ctrl, 1)}%</td></tr>`).join("")}</table></div>
 <div class="note">First orbit-matched radar image: ${P.post} (${fmt(P.hours)} h after the rain): the flood was still standing, but this is outside 72 h.</div>`;
+// Photo verification
+const API = location.protocol.startsWith("http") ? "" : null;
+if (API === null) { $("#phOffline").classList.remove("hidden"); $("#phForm").querySelector("button").disabled = true; }
+$("#phEvent").innerHTML += D.events.map(e => `<option value="${e.id}">${e.start} · ${D.districts[e.district_code]} · ${e.cyclone ? cyc(e.cyclone) : peril(e.types)}</option>`).join("");
+const esc = x => String(x ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c]);
+const vtag = v => `<span class="tag ${v.startsWith("PHOTO CONFIRMS") ? "PAY" : v.startsWith("INVALID") ? "VER" : "NO"}">${esc(v)}</span>`;
+function renderResult(r) {
+  const mark = ok => ok === true ? "✔" : ok === false ? "✘" : "–";
+  $("#phOut").innerHTML = `<p style="margin:0 0 8px">${vtag(r.verdict)}</p>${r.resolution ? `<p style="margin:0 0 8px"><b>${esc(r.resolution)}</b></p>` : ""}
+   <table>${r.checks.map(c => `<tr><td>${mark(c.ok)}</td><td>${esc(c.check)}</td><td>${esc(c.detail)}${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}</td></tr>`).join("")}</table>
+   ${r.estimated_photo_loss_pct != null ? `<p class="note">Photo-based loss estimate: ${esc(r.estimated_photo_loss_pct)}% (supporting evidence only).</p>` : ""}
+   ${r.case ? `<p class="note">System decision for this mandal and event: ${r.case.map(c => `${esc(c.crop)}: ${esc(c.action)}`).join(" · ")}</p>` : ""}`;
+}
+async function loadLog() {
+  if (API === null) return;
+  try {
+    const j = await (await fetch(`${API}/api/v1/poc/photo/log?limit=20`)).json();
+    $("#phLog").innerHTML = "<tr><th>Submitted</th><th>Event</th><th>Mandal</th><th>Parcel</th><th>GPS</th><th>Verdict</th></tr>" +
+      j.data.map(r => `<tr><td>${esc(r.time)}</td><td>${esc(r.event_id || "–")}</td><td>${esc(r.context.mandal || "–")}</td><td>${esc(r.context.survey || "–")}</td><td>${esc(r.gps_source || "none")}</td><td>${vtag(r.verdict)}</td></tr>`).join("");
+  } catch (e) { $("#phLog").innerHTML = "<tr><td class='note'>Backend not reachable.</td></tr>"; }
+}
+$("#phForm").onsubmit = async ev => {
+  ev.preventDefault();
+  const fd = new FormData(ev.target);
+  for (const k of ["lat", "lon", "taken", "claimed_survey", "claimed_crop", "event_id"]) if (!fd.get(k)) fd.delete(k);
+  $("#phBusy").textContent = "Checking…";
+  try {
+    const res = await fetch(`${API}/api/v1/poc/photo/verify`, {method: "POST", body: fd});
+    const j = await res.json();
+    if (!res.ok) throw new Error(j.detail || res.statusText);
+    renderResult(j.data); loadLog();
+  } catch (e) { $("#phOut").innerHTML = `<span class="warn">${esc(e.message)}</span>`; }
+  $("#phBusy").textContent = "";
+};
+loadLog();
+
 $("#sev").innerHTML = `<p style="margin:0">Sentinel-1 delivered a post-event image within 72 h for <b>${D.seventy_two.within} of ${D.seventy_two.events}</b> events. A 72-hour decision therefore relies on the daily rainfall trigger plus any radar or optical image available, and every result carries its image date. Where no image arrives in time, the case goes to field and photo verification instead of waiting.</p>`;
 </script>
 </body>
