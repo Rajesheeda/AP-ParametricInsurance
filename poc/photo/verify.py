@@ -158,7 +158,9 @@ def verify(image_bytes, claimed_crop=None, claimed_survey=None, lat=None, lon=No
 
     # 6-7. vision + crop match
     expect = claimed_crop or (booked[0] if booked else None)
-    vis = vision(image_bytes, expect or "Unknown") if vision else None
+    # Blind identification: the model is NOT told the claimed / booked crop, otherwise it tends to echo it
+    # (a plain green image was reported as "Paddy, healthy, 0.96" when the prompt named Paddy).
+    vis = vision(image_bytes, "Unknown (identify it from the photo)") if vision else None
     if vis and (vis.get("fallback_used") == "rule_based" or "fallback" in str(vis.get("analysis_source", "")).lower()):
         # the demo engine's rule-based fallback echoes the expected crop and a fixed damage value: never evidence
         checks.append(dict(check="vision model", ok=None, detail="vision service unavailable: no image analysis was done"))

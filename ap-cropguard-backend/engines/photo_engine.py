@@ -10,6 +10,7 @@ Designed for bulletproof demo-day reliability.
 """
 
 import os
+import re
 import json
 import base64
 import io
@@ -28,6 +29,7 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GROQ_API_KEY   = os.getenv("GROQ_API_KEY")
 GEMINI_MODEL   = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+GROQ_MODEL     = os.getenv("GROQ_VISION_MODEL", "qwen/qwen3.8-27b")
 
 _gemini_client = _genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 _groq_client   = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
@@ -60,9 +62,10 @@ ASSESSMENT_PROMPT = (
     "  ],\n"
     '  "analysis_notes": "brief observation about crop condition and visible symptoms"\n'
     "}\n\n"
-    "Crop context: Kurnool district, Andhra Pradesh, "
-    "Kharif season. Common crops: Groundnut, Cotton, "
-    "Redgram, Jowar, Sunflower. Post-disaster assessment."
+    "Context: Andhra Pradesh, India; post-disaster crop assessment. "
+    "Identify the crop only from what is visible in the photo. If no crop "
+    "plant is clearly visible, set crop_identified to \"none\", "
+    "damage_class to \"Healthy\" and confidence_score below 0.2."
 )
 
 # ---------------------------------------------------------------------------
@@ -99,7 +102,10 @@ def parse_vision_response(response_text: str) -> dict:
 
     Raises ValueError if required fields are missing or JSON is malformed.
     """
-    text = response_text.strip()
+    text = re.sub(r"<think>.*?</think>", "", response_text, flags=re.S).strip()
+    m = re.search(r"\{.*\}", text, flags=re.S)
+    if m and not text.startswith("```"):
+        text = m.group(0)
 
     # Strip markdown fences
     if text.startswith("```"):
@@ -184,7 +190,7 @@ def assess_with_groq(image_bytes: bytes, claimed_crop: str) -> dict:
     prompt_text = ASSESSMENT_PROMPT + f"\n\nFarmer declared crop: {claimed_crop}"
 
     response = _groq_client.chat.completions.create(
-        model="meta-llama/llama-4-scout-17b-16e-instruct",
+        model=GROQ_MODEL,
         messages=[
             {
                 "role": "user",
@@ -207,7 +213,7 @@ def assess_with_groq(image_bytes: bytes, claimed_crop: str) -> dict:
 
     response_text = response.choices[0].message.content
     result = parse_vision_response(response_text)
-    result["analysis_source"] = "Groq LLaMA Vision (llama-4-scout)"
+    result["analysis_source"] = f"Groq Vision ({GROQ_MODEL})"
     return result
 
 
@@ -235,38 +241,32 @@ def rule_based_fallback(claimed_crop: str) -> dict:
     }
 
 
+VISION_ORDER = [x.strip() for x in os.getenv("VISION_ORDER", "gemini,groq").split(",") if x.strip()]
+
+
 def assess_photo(image_bytes: bytes, claimed_crop: str) -> dict:
     """
     Main entry point for crop photo assessment.
 
-    Fallback chain:
-      1. Groq LLaMA Vision (llama-4-scout)     — primary (confirmed working)
-      2. Gemini Vision (GEMINI_MODEL)           — secondary
-      3. Rule-based conservative estimate       — guaranteed fallback
-
-    Never raises an exception. Always returns a result dict with
-    a 'fallback_used' field indicating which path was taken.
+    Order from VISION_ORDER (default gemini, then groq): in tests on a plain green image Gemini answered
+    "none visible" while the Groq Qwen model named a crop, so Gemini goes first.
+    Rule-based conservative estimate is the guaranteed last resort and is flagged fallback_used="rule_based".
+    Never raises.
     """
-    # 1. Try Groq (primary — confirmed free-tier quota available)
-    try:
-        result = assess_with_groq(image_bytes, claimed_crop)
-        result["fallback_used"] = None
-        print(f"[photo_engine] Assessment via Groq LLaMA — crop: {claimed_crop}")
-        return result
-    except Exception as groq_err:
-        print(f"[photo_engine] Groq failed: {groq_err}")
+    engines = {"gemini": assess_with_gemini, "groq": assess_with_groq}
+    for i, name in enumerate(VISION_ORDER):
+        fn = engines.get(name)
+        if fn is None:
+            continue
+        try:
+            result = fn(image_bytes, claimed_crop)
+            result["fallback_used"] = None if i == 0 else name
+            print(f"[photo_engine] Assessment via {name}")
+            return result
+        except Exception as err:
+            print(f"[photo_engine] {name} failed: {err}")
 
-    # 2. Try Gemini
-    try:
-        result = assess_with_gemini(image_bytes, claimed_crop)
-        result["fallback_used"] = "gemini"
-        print(f"[photo_engine] Assessment via Gemini Vision — crop: {claimed_crop}")
-        return result
-    except Exception as gemini_err:
-        print(f"[photo_engine] Gemini failed: {gemini_err}")
-
-    # 3. Rule-based fallback
-    print(f"[photo_engine] Both APIs failed — using rule-based fallback for crop: {claimed_crop}")
+    print(f"[photo_engine] All vision services failed: rule-based fallback for crop: {claimed_crop}")
     result = rule_based_fallback(claimed_crop)
     result["fallback_used"] = "rule_based"
     return result
