@@ -165,6 +165,25 @@ The method follows the UN-SPIDER Recommended Practice for Sentinel-1 flood mappi
 - **Fallback rule:** the demo engine's rule-based fallback, used when no vision service answers, is never counted as evidence.
 - **Test:** a plain-colour image with a valid geotag inside parcel 24/A (Chapad) was rejected as "crop mismatch → field visit".
 
+**Vision benchmark on the Department's labelled images.**
+- **Data:** Label Studio pest and disease repository, about 79k images, 28k of them labelled.
+- **Sample:** 30 random labelled images from each of 8 post-flood / excess-moisture classes (paddy BLB, sheath blight, blast, brown spot, false smut, brown plant hopper; cotton bacterial blight, Alternaria).
+- **Protocol:** each image was sent to the model **blind**, without naming the crop or label, and scored against the label using a keyword list fixed before scoring (`poc/photo/pest_benchmark.py`).
+
+| Gemini (n = 218) | Result (95% CI) |
+|---|---|
+| Crop identified correctly | **100%** (97–100%) |
+| Any pest / disease detected | **90%** (85–93%) |
+| Correct pest / disease named | **47%** (41–54%) |
+
+- Correct naming by class: false smut 92%, Alternaria 62%, brown spot 60%, blast 47%, sheath blight / BLB / cotton bacterial blight about 30–33%, brown plant hopper 7% (n = 14).
+- The Groq Qwen model, on the 132 calls not rate-limited, named the correct pest or disease 20% of the time.
+
+**Use in the POC:**
+- The vision model is reliable for the **crop-consistency check** (crop seen vs e-Panta booking).
+- It is **not** reliable enough to diagnose pests and diseases on its own, so its pest and disease output is shown as a suggestion for the agriculture officer, never as a decision.
+- The Department's 28k labelled images are enough to train and test a dedicated detector (YOLO-OBB, the format they export). That is the next step after the POC.
+
 ---
 
 ## 6. Results for the pilot mandals

@@ -79,6 +79,7 @@ APAIMS `objectid` is not unique (8.5k duplicates); `p04` now issues a row-based 
 - Start the backend with the `poc-backend` entry in `.claude/launch.json` (uvicorn on 127.0.0.1:8010), then open `http://127.0.0.1:8010/poc/`.
 - Vision (`engines/photo_engine.py`): order from `VISION_ORDER` (default `gemini,groq`). Models: `GEMINI_MODEL` (default `gemini-3.5-flash-lite`), `GROQ_VISION_MODEL` (default `qwen/qwen3.8-27b`; llama-4-scout was withdrawn). Groq key replaced 2026-10-09.
 - Lessons: a prompt that names the claimed crop or lists local crops made models "see" that crop in a plain green image, so the POC check is blind (no crop named) and the prompt asks for "none" when no crop is visible. Both models then return "none" for non-crop images.
+- Pest/disease benchmark (`poc/photo/pest_sample.py`, `pest_benchmark.py`; images in `poc/data/pest_benchmark/`, gitignored): Department Label Studio repo (`C:\AP-Agri-Common\data\LabelStudio`, 79k images / 28k labelled; its script holds an API key, never copy it). 8 post-flood classes × 30, blind: Gemini crop 100%, any pest/disease 90%, correct name 47% (41–54%); Groq Qwen 20% (rate-limited). So vision = crop check + suggestion only; dedicated detector is post-POC work.
 - The old Kurnool demo screens in `ap-cropguard-frontend/` are unchanged.
 
 ## Shared department data (C:\AP-Agri-Common)
