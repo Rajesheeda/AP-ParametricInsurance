@@ -126,6 +126,7 @@ ul.tight{margin:6px 0;padding-left:18px}ul.tight li{margin:3px 0}
 </section>
 
 <section id="va" class="hidden">
+  <div class="card" style="margin-bottom:14px"><h2>Validation against real CCE yields (Department data)</h2><div id="cce"></div></div>
   <div class="grid g2">
     <div class="card"><h2>Interim validation (second sensor, not claims)</h2>
       <div class="tbl"><table id="valTbl"></table></div>
@@ -139,7 +140,7 @@ ul.tight{margin:6px 0;padding-left:18px}ul.tight li{margin:3px 0}
   </div>
   <div class="card" style="margin-top:14px"><h2>Known limits (stated up front)</h2>
     <ul class="tight">
-      <li><b>No PMFBY claims or CCE yields yet.</b> The ≥75% correlation criterion cannot be tested until the Crop Insurance Section shares them (requested). Everything on this page is labelled interim.</li>
+      <li><b>Real CCE yields cover YSR Kadapa only</b> (Chapad and Khajipet among 26 mandals, 2019–2025). No CCE or claims for Palnadu, Manyam or Chittoor, and no PMFBY claim amounts. Against CCE, weather triggers alone fall short of the ≥75% target; see the CCE card above.</li>
       <li>Parcel boundaries exist for YSR Kadapa only (about 56% of villages); 8.5k APAIMS polygons share an ID and are excluded from parcel analysis.</li>
       <li>Sentinel-1 had a 12-day repeat in 2022–2024 (one satellite); the 72-hour window is met by radar alone in under half the events.</li>
       <li>SAR cannot tell disaster flooding from paddy puddling; the e-Panta planting-window gate sends those cases to field verification.</li>
@@ -176,6 +177,7 @@ const kp = [
   [D.events.length, "disaster events assessed, 2020–2026"],
   [`${D.seventy_two.within}/${D.seventy_two.events}`, "events with a radar image inside 72 h"],
   [acute.filter(r => cls(r.action) === "PAY").length + season.filter(r => cls(r.action) === "PAY").length, "mandal-crop cases where trigger and satellite agree"],
+  ...(D.cce ? [[`${fmt(100 * Math.max(...D.cce.systems.filter(x => x.indemnity === 80).map(x => x.pod)))}%`, "of real CCE loss events caught by weather triggers alone (YSR, 2019–2025)"]] : []),
 ];
 $("#kpis").innerHTML = kp.map(([v, l]) => `<div class="card kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
 
@@ -282,6 +284,20 @@ $("#phForm").onsubmit = async ev => {
 };
 loadLog();
 
+const C = D.cce;
+if (C) {
+  const lvl = 80, rows = C.systems.filter(x => x.indemnity === lvl);
+  $("#cce").innerHTML = `<div class="note" style="margin-top:0">${C.n} mandal-crop-years (${C.mandals} mandals of YSR Kadapa; paddy ${C.crops.Paddy || 0}, cotton ${C.crops.Cotton || 0}), Kharif ${C.years[0]}–${C.years[C.years.length - 1]}. Actual loss = CCE yield below the mandal's own normal (mean of its other years). Loss event = yield below ${lvl}% of normal (PMFBY indemnity level; 70% and 90% in the report).</div>
+  <div class="tbl"><table><tr><th>Trigger system</th><th class="n">Agreement</th><th class="n">CCE losses caught</th><th class="n">False alarms</th><th class="n">Fired / losses</th></tr>
+  ${rows.map(r => `<tr><td>${r.system}</td><td class="n">${fmt(100 * r.agreement)}%</td><td class="n"><b>${fmt(100 * r.pod)}%</b></td><td class="n">${fmt(100 * r.far)}%</td><td class="n">${r.fired} / ${r.losses}</td></tr>`).join("")}</table></div>
+  <h3>Year by year</h3><div class="tbl"><table><tr><th>Kharif</th><th class="n">Mean CCE loss</th><th class="n">Season trigger fired</th><th class="n">+ acute (CHIRPS)</th><th class="n">+ acute (ERA5)</th></tr>
+  ${C.by_year.map(y => `<tr><td>${y.year}</td><td class="n">${fmt(y.loss_pct)}%</td><td class="n">${fmt(100 * y.season)}%</td><td class="n">${fmt(100 * y.chirps)}%</td><td class="n">${fmt(100 * y.era5)}%</td></tr>`).join("")}</table></div>
+  <ul class="tight"><li><b>2020 (cyclone Nivar), 39% loss:</b> caught in every mandal when the acute layer uses ERA5; CHIRPS smooths the cyclone rain and misses it.</li>
+  <li><b>2021 (November floods), 41% loss:</b> missed by both rainfall sources, which under-read the extreme rain recorded by gauges.</li>
+  <li><b>2022, 20% loss:</b> no weather signal; likely non-weather loss (e.g. pests), which rainfall cannot see.</li>
+  <li><b>2023–2024:</b> drought triggers fired but CCE losses were small: irrigated paddy buffered the deficit.</li>
+  <li><b>Conclusion:</b> weather triggers alone catch about a third of real losses. That is why every disagreement goes to field / photo verification instead of an automatic payment or refusal. Both rainfall sources were chosen before this data arrived and are shown side by side.</li></ul>`;
+}
 $("#sev").innerHTML = `<p style="margin:0">Sentinel-1 delivered a post-event image within 72 h for <b>${D.seventy_two.within} of ${D.seventy_two.events}</b> events. A 72-hour decision therefore relies on the daily rainfall trigger plus any radar or optical image available, and every result carries its image date. Where no image arrives in time, the case goes to field and photo verification instead of waiting.</p>`;
 </script>
 </body>

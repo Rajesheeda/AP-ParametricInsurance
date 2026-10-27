@@ -5,7 +5,7 @@
 - Kharif: Palnadu, YSR Kadapa, Parvathipuram Manyam.
 - Rabi: Chittoor, proposed in place of East Godavari because no East Godavari data was available.
 
-**Status of validation:** interim. PMFBY claims and CCE yields have been requested and not yet received. No number in this report is presented as a comparison with actual losses.
+**Status of validation:** the triggers have been tested against **real CCE yields** shared by the Department for YSR Kadapa (26 mandals, Kharif 2019–2025, section 7.4). No CCE or claims were available for Palnadu, Parvathipuram Manyam or Chittoor; validation there is interim (second sensor only).
 
 ---
 
@@ -26,6 +26,7 @@
 | Sentinel-1 "flood" on dry control dates (false-alarm floor) | median 0.1–0.6% of cropland, up to 9.5% in one mandal |
 | Pilot events whose flooded cropland beat that floor within 72 h | **0 of 22** |
 | Positive control: Budameru / Krishna floods, Sep 2024 (rule declared in advance) | **PASS:** 5.6% flooded cropland vs 1.4% dry floor; up to 21% in the flooded mandals |
+| **Real CCE losses caught by weather triggers alone** (YSR, 166 mandal-crop-years, loss = yield < 80% of normal) | **7%** season trigger only; **37%** with the acute layer on ERA5 (agreement 60%). Below the ≥75% target. |
 | Seasons where the rainfall trigger and satellite agree on drought | Gurazala 2023 (cotton, chilli, paddy) |
 | False-positive reduction from the standing-crop gate (Michaung 2023, YSR, parcel level) | **60%** of radar-flagged parcels removed (harvested or not yet sown) |
 
@@ -259,16 +260,54 @@ POD = share of VCI-stress seasons the trigger caught. FAR = share of trigger sea
 - The pilot events did not produce flooding above routine field water, so the system's refusal to pay on them was correct, not a blind spot.
 - The 72-hour window still needs the rainfall trigger and field verification whenever radar timing does not cooperate.
 
-### 7.4 The ≥75% criterion
-- That criterion compares triggers with **actual field losses**.
-- It requires PMFBY claims and CCE yields (requested) or the department's crop-damage enumeration records (requested).
-- The pipeline is ready to compute it as soon as either arrives.
+### 7.4 Validation against real CCE yields (YSR Kadapa)
 
----
+**Data:** Department CCE records (plot yields of two experiments per village, 5 × 5 m or 10 × 10 m plots), Kharif 2019–2025, YSR Kadapa. After matching mandals and requiring at least 3 CCE years per mandal-crop: **166 mandal-crop-years** (26 mandals; paddy 114, cotton 52). This includes the pilot mandals Chapad and Khajipet.
+
+**Method (declared before computing; `poc/pipeline/p15_validate_cce.py`):**
+- Actual yield = mean CCE yield per mandal, crop and year (kg/ha).
+- Normal = mean of the same mandal and crop over its **other** CCE years, so a year is never part of its own baseline.
+- Loss event = actual yield below normal × indemnity level, reported for the three PMFBY levels (70, 80, 90%).
+- Trigger = the season payout from section 4, alone and combined with the acute-event layer (section 4, same qualifying rule as the pilot assessment).
+
+**Results** (loss = yield below 80% of normal; 70% and 90% give the same picture):
+
+| Trigger system | Agreement | CCE losses caught (POD) | False alarms (FAR) |
+|---|---|---|---|
+| Season trigger only (CHIRPS) | 55% | 7% | 83% |
+| Season + acute event, acute on CHIRPS | 44% | 10% | 87% |
+| Season + acute event, acute on ERA5 | **60%** | **37%** | **57%** |
+
+Spearman between season stress and CCE loss: −0.12 (p = 0.12).
+
+| Kharif | Mean CCE loss | Season trigger fired | + acute (CHIRPS) | + acute (ERA5) |
+|---|---|---|---|---|
+| 2019 | 5% | 0% | 0% | 0% |
+| 2020 (cyclone Nivar) | 39% | 0% | 5% | **100%** |
+| 2021 (November floods) | 41% | 0% | 10% | 0% |
+| 2022 | 20% | 0% | 0% | 0% |
+| 2023 (deficit year) | 14% | 54% | 81% | 81% |
+| 2024 | 2% | 37% | 82% | 41% |
+| 2025 | 7% | 0% | 0% | 0% |
+
+**Reading**
+- **Nivar 2020** was caught in every mandal by the ERA5 acute layer. CHIRPS, a 0.05° satellite–gauge blend, smooths the cyclone's rainfall below each mandal's 99th percentile.
+- **The November 2021 floods** were missed by both sources, which under-read the extreme rainfall recorded by gauges. IMD gridded or station data would be needed; `imdpune.gov.in` was not reachable from our environment.
+- **2022 (20% loss)** shows no weather signal. This is likely non-weather loss (for example pests), which no rainfall index can see.
+- **2023–2024:** deficit triggers fired while CCE losses stayed small. Irrigated paddy buffered the rainfall deficit, so rainfall cover over irrigated land over-pays.
+- **Both rainfall sources were chosen before the CCE data arrived** (ERA5 for screening on 2026-10-01, CHIRPS for triggers on 2026-10-07). Neither was tuned to this test, and both are reported.
+
+**Against the ≥75% criterion:**
+- Weather triggers alone **do not reach it**. They catch about a third of real loss events at best, which is the basis risk of index insurance measured on the Department's own data.
+- This is the reason the POC design never pays or refuses on a weather trigger alone. Every disagreement with satellite evidence goes to field and photo verification.
+- **Next steps that address the misses directly:**
+  - gauge-based rainfall (IMD) for extreme events
+  - an irrigation mask from e-Panta irrigation source to stop deficit cover running over canal-fed paddy
+  - CCE-calibrated trigger levels per mandal once a longer CCE record is available
 
 ## 8. Known limits
 
-1. No claims or CCE data yet, so all validation is interim.
+1. Real CCE yields exist for YSR Kadapa only (2019–2025); none for Palnadu, Manyam or Chittoor, and no PMFBY claim amounts. Against CCE, weather triggers alone catch at most about a third of loss events (section 7.4).
 2. Parcel boundaries exist only for YSR (about 56% of villages). Palnadu and Manyam run at mandal level; mandal-level flood is spread over cropland in proportion to crop area.
 3. Sentinel-1 meets 72 h for 8 of 22 events. The system responds with the daily rainfall trigger plus field verification, and every result carries its image date.
 4. SAR cannot tell disaster flooding from paddy puddling or Rabi irrigation. The e-Panta planting gate and the dry-control floor handle this, at the cost of sending most acute cases to verification.

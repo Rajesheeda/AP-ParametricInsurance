@@ -5,7 +5,7 @@
 
 ## Where we are
 - **Stage:** POC. hierachAi was given a chance to prove the solution after the demo did not fully convince the judges.
-- **Window:** 15 days from 2026-09-25, ending about 2026-10-10.
+- **Window:** POC build 2026-09-25 to about 2026-10-10. **Demo: 30 October 2026.**
 - **Judges:** Murthy (remote-sensing and agri-science expert, hostile, works bottom-up) and Kalyan / Mohiuddin (Crop Insurance Section).
 - **Scope:**
   - Kharif: Palnadu (22), YSR Kadapa (11), Parvathipuram Manyam (14).
@@ -50,6 +50,7 @@
 | Interim validation | `pipeline/p11_validate_modis.py` | Rainfall stress vs MODIS VCI (Kogan, VCI<35): mandal-season Spearman −0.13; district-year −0.35 YSR, −0.30 Palnadu, 0 Manyam. Rainfall alone has high basis risk. |
 | Parcel cross-check | `pipeline/p12_parcel_crosscheck.py` | Michaung 2023 YSR: the standing-crop gate removed 60% of SAR-flagged parcels (harvested / Rabi land preparation); the remaining ones show no NDVI loss vs cohort, so this tests false positives, not loss. |
 | Pilot assessment | `pipeline/p13_assessment.py` | Acute: event's own trigger (CHIRPS p99 / IBTrACS) + SAR flood above the dry-control noise floor, within 72 h, on standing crops, with a paddy-planting gate → payout / field verification / none. Season: trigger + VCI<35. |
+| **CCE validation** | `pipeline/p15_validate_cce.py` | Real Department CCE yields (4 CSVs in `C:\AP-Agri-Common\data`, Oct 2026), YSR Kadapa, 166 mandal-crop-years 2019–2025. Loss = yield < 70/80/90% of the mandal's leave-one-out normal. Season trigger catches 7% of losses; + acute layer on ERA5 37% (agreement 60%); CHIRPS misses Nivar 2020; both miss Nov 2021 floods. Below the 75% target; reported as basis risk. |
 | Dashboard | `pipeline/p14_dashboard_data.py` + `dashboard_src/index.html` | One self-contained file: `poc/data/dashboard/index.html`. Opened via the backend at `http://127.0.0.1:8010/poc/` it also has the photo tab. |
 | Photo verification (Module B) | `poc/photo/verify.py`, `ap-cropguard-backend/routers/poc_photo.py` | `POST /api/v1/poc/photo/verify`, `GET /api/v1/poc/photo/log`. Checks EXIF geotag, pilot mandal, YSR cadastral parcel and survey number, e-Panta booking (all seasons standing on that date), timing vs event, vision crop/damage, crop match → verdict + case resolution (incl. basis-risk catch). The demo engine's rule-based fallback is **never** counted as evidence. Log: `poc/data/photo_evidence.jsonl`. |
 
@@ -65,7 +66,7 @@ APAIMS `objectid` is not unique (8.5k duplicates); `p04` now issues a row-based 
 - Palnadu and Manyam e-Panta names are in Telugu only; they are joined by transliteration and fuzzy matching, with reviewed exceptions listed in the script.
 - Irrigation source is unknown for about 70% of YSR acreage and exists for Kharif 2026 only.
 - ERA5-Land underestimates convective extremes, so it is used for screening only; triggers use CHIRPS (and IMD if reachable; imdpune.gov.in times out from here).
-- No PMFBY claims or CCE yield data yet, so any interim validation is labelled "interim", **never** "PMFBY".
+- CCE yields exist for YSR Kadapa only (received Oct 2026); no PMFBY claim amounts and nothing for Palnadu, Manyam or Chittoor. The department said no further data will come.
 
 ## Murthy rules
 1. Never present a proxy as actuals; every number carries its source.

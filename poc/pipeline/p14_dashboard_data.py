@@ -83,7 +83,11 @@ if len(pcf) == 3:
               post=evd.post_image_time.iloc[0], hours=float(evd.hours_after_event_end.iloc[0]),
               units=evd.sort_values("share", ascending=False)[["unit", "dist_km", "share", "ctrl"]].head(6).to_dict("records"))
 
+cce_f = DERIVED / "validation_cce_summary.json"
+cce = json.loads(cce_f.read_text(encoding="utf-8")) if cce_f.exists() else None
+
 data = dict(
+    cce=cce,
     positive_control=pc,
     generated=str(pd.Timestamp.now().date()),
     districts=DIST,
