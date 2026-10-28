@@ -5,6 +5,7 @@ from the Department's own script at runtime, so the key is never copied into thi
 Output (gitignored): poc/data/pest_benchmark/<class>/<task_id>.jpg + labels.json
 """
 import base64
+import os
 import json
 import random
 import sys
@@ -18,9 +19,17 @@ import batch_export_yolo_obb_and_clean as B  # noqa: E402
 from label_studio_sdk._extensions.label_studio_tools.core.utils.io import get_local_path  # noqa: E402
 from label_studio_sdk.client import LabelStudio  # noqa: E402
 
-OUT = Path(__file__).resolve().parent.parent / "data" / "pest_benchmark"
-PER_CLASS = 30
+import argparse
+
+ap = argparse.ArgumentParser()
+ap.add_argument("--out", default="pest_benchmark", help="folder under poc/data")
+ap.add_argument("--per-class", type=int, default=30)
+ap.add_argument("--exclude", default=None, help="labels.json whose task ids must not be reused (held-out test set)")
+ARGS = ap.parse_args()
+OUT = Path(__file__).resolve().parent.parent / "data" / ARGS.out
+PER_CLASS = ARGS.per_class
 SEED = 7
+EXCLUDE = ({m["task_id"] for m in json.loads(Path(ARGS.exclude).read_text(encoding="utf-8"))} if ARGS.exclude else set())
 # Post-flood / excess-moisture pests and diseases of the pilot crops (paddy, cotton)
 CLASSES = [
     (181, "paddy_bacterial_leaf_blight", "Paddy"),
@@ -57,7 +66,7 @@ def s3_of(task):
 ls = LabelStudio(base_url=B.LABEL_STUDIO_URL, api_key=B.LABEL_STUDIO_API_KEY)
 manifest = []
 for pid, name, crop in CLASSES:
-    pool = [t for t in ls.tasks.list(project=pid, fields="all", page_size=100) if labels_of(t)]
+    pool = [t for t in ls.tasks.list(project=pid, fields="all", page_size=100) if labels_of(t) and t.id not in EXCLUDE]
     random.Random(SEED).shuffle(pool)
     d = OUT / name
     d.mkdir(parents=True, exist_ok=True)
@@ -74,6 +83,11 @@ for pid, name, crop in CLASSES:
                 im = Image.open(p).convert("RGB")
                 im.thumbnail((1600, 1600))
                 im.save(dst, "JPEG", quality=88)
+                im.close()
+                try:
+                    os.remove(p)  # the SDK caches full-size originals; they filled the disk once
+                except OSError:
+                    pass
             manifest.append(dict(file=str(dst.relative_to(OUT)), task_id=t.id, project_id=pid, cls=name, crop=crop,
                                  labels=labels_of(t)))
             got += 1

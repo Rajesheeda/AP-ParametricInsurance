@@ -149,6 +149,27 @@ for p in pil.itertuples():
                              weather_trigger=weather, satellite_confirms=sat, action=action))
 
 a = pd.DataFrame(rows)
+
+# Estimated yield loss from the CCE calibration (p18, YSR Kadapa 2019-2025), by which trigger fired
+import json  # noqa: E402
+
+cal_f = DERIVED / "loss_calibration.json"
+if cal_f.exists():
+    cal = json.loads(cal_f.read_text(encoding="utf-8"))
+    kind = np.where(a.weather_trigger.fillna(False).astype(bool), np.where(a.kind == "acute", "acute", "drought"), "none")
+    a["est_loss_basis"] = kind
+    a["est_loss_median_pct"] = [cal[k]["median"] for k in kind]
+    a["est_loss_iqr"] = [f"{cal[k]['q25']:.0f}-{cal[k]['q75']:.0f}" for k in kind]
+    a["est_loss_n"] = [cal[k]["n"] for k in kind]
+# Soil moisture percentile for season rows (p17); evidence only, does not change the decision (see report 7.5)
+sm_f = DERIVED / "soil_moisture_index.parquet"
+if sm_f.exists():
+    smi = pd.read_parquet(sm_f)
+    mp = pil.set_index("adm3_name").adm3_id.to_dict()
+    a["year"] = pd.to_datetime(a.start).dt.year
+    a = a.merge(smi.rename(columns={"era5land_root": "sm_root_pct", "smap_surface": "sm_smap_pct"})[
+        ["adm3_id", "crop", "year", "sm_root_pct", "sm_smap_pct"]].assign(mandal=lambda d: d.adm3_id.map({v: k for k, v in mp.items()})),
+        on=["mandal", "crop", "year"], how="left").drop(columns=["adm3_id"])
 a.to_csv(DERIVED / "assessment_pilot.csv", index=False, encoding="utf-8-sig")
 print(a.groupby(["kind", "action"]).size().to_string())
 print("\nacute events with any trigger or satellite signal:")

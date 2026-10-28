@@ -177,14 +177,22 @@ def verify(image_bytes, claimed_crop=None, claimed_survey=None, lat=None, lon=No
             checks.append(dict(check="crop match", ok=match, detail=f"seen '{vis.get('crop_identified')}' vs "
                                + ("booked " if booked else "claimed ") + ", ".join(target)))
 
+    # pest / disease suggestion from the trained classifier (informational; never part of the verdict)
+    sug = pest_suggestion(image_bytes) if vis else None
+    if sug:
+        checks.append(dict(check="pest/disease (trained model)", ok=None,
+                           detail="; ".join(f"{s['label']} {s['prob']:.0%}" for s in sug),
+                           note="suggestion for the officer: 60% held-out accuracy on 8 post-flood paddy/cotton classes"))
+
     # verdict
-    hard = [c for c in checks if c["check"] in ("location", "survey number", "timing", "crop match", "e-Panta booking") and c["ok"] is False]
+    hard =[c for c in checks if c["check"] in ("location", "survey number", "timing", "crop match", "e-Panta booking") and c["ok"] is False]
     if not src or hard:
         verdict = "INVALID EVIDENCE: FIELD VISIT"
     elif vis is None:
         verdict = "CHECKS PASSED: VISION UNAVAILABLE, FIELD VISIT" if vision_down else "CHECKS PASSED: VISION PENDING"
     elif vis.get("damage_class") in ("Partially Damaged", "Severely Damaged"):
-        verdict = "PHOTO CONFIRMS LOSS"
+        # typed-in coordinates can be copied from any parcel, so they cannot confirm a loss on their own
+        verdict = "PHOTO CONFIRMS LOSS" if src == "EXIF" else "PHOTO SHOWS DAMAGE: MANUAL GPS, OFFICER TO VERIFY"
     else:
         verdict = "PHOTO DOES NOT CONFIRM LOSS"
     case = None
@@ -200,6 +208,8 @@ def verify(image_bytes, claimed_crop=None, claimed_survey=None, lat=None, lon=No
             resolution = ("Loss confirmed by photo: case can be closed for payment." if "FIELD / PHOTO VERIFICATION" in acts else
                           "Photo contradicts 'no payout': refer for field verification (basis-risk catch)." if "NO PAYOUT" in acts else
                           "Consistent with parametric payout.")
+        elif verdict.startswith("PHOTO SHOWS DAMAGE: MANUAL GPS"):
+            resolution = "Damage visible but location typed in by hand: AEO to verify the field before any payment."
         elif verdict == "PHOTO DOES NOT CONFIRM LOSS":
             resolution = ("Photo shows no damage: verification case closed without payment." if "FIELD / PHOTO VERIFICATION" in acts else
                           "Photo contradicts payout: flag for audit." if "PARAMETRIC PAYOUT" in acts else "Consistent with no payout.")
@@ -211,6 +221,34 @@ def verify(image_bytes, claimed_crop=None, claimed_survey=None, lat=None, lon=No
     with LOG.open("a", encoding="utf-8") as f:
         f.write(json.dumps(rec, default=str, ensure_ascii=False) + "\n")
     return rec
+
+
+_PEST = {}
+
+
+def pest_suggestion(image_bytes, top=3):
+    """Top-k suggestions from the classifier trained on the Department's labelled images (pest_train.py).
+    Held-out accuracy 60% over 8 post-flood paddy/cotton classes; a suggestion for the officer, not a diagnosis."""
+    mdl_f = POC / "data" / "pest_model" / "model.joblib"
+    if not mdl_f.exists():
+        return None
+    if not _PEST:
+        import joblib
+        import torch
+        from torchvision import models, transforms
+        net = models.efficientnet_b0(weights=models.EfficientNet_B0_Weights.DEFAULT)
+        net.classifier = torch.nn.Identity()
+        net.eval()
+        _PEST.update(torch=torch, net=net, model=joblib.load(mdl_f), tf=transforms.Compose([
+            transforms.Resize(320), transforms.CenterCrop(320), transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]))
+    t = _PEST["torch"]
+    with t.no_grad():
+        x = _PEST["net"](_PEST["tf"](Image.open(io.BytesIO(image_bytes)).convert("RGB")).unsqueeze(0)).numpy()
+    clf = _PEST["model"]["clf"]
+    p = clf.predict_proba(x)[0]
+    order = p.argsort()[::-1][:top]
+    return [dict(label=str(clf.classes_[i]).replace("_", " "), prob=float(p[i])) for i in order]
 
 
 def evidence_log(limit=50):

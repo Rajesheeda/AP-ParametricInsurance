@@ -183,7 +183,16 @@ The method follows the UN-SPIDER Recommended Practice for Sentinel-1 flood mappi
 **Use in the POC:**
 - The vision model is reliable for the **crop-consistency check** (crop seen vs e-Panta booking).
 - It is **not** reliable enough to diagnose pests and diseases on its own, so its pest and disease output is shown as a suggestion for the agriculture officer, never as a decision.
-- The Department's 28k labelled images are enough to train and test a dedicated detector (YOLO-OBB, the format they export). That is the next step after the POC.
+- **Trained classifier (done):**
+  - EfficientNet-B0 (ImageNet-pretrained, frozen) plus multinomial logistic regression, trained on 1,124 further Department images from the same 8 classes.
+  - The test images' task IDs were excluded, and 109 near-duplicates were removed by image fingerprint (`poc/photo/pest_train.py`).
+  - **Held-out test accuracy 60%** (95% CI 53–66%) on the same 240 test images.
+  - On the 218 images Gemini also answered: **58% vs Gemini 47%**. Exact McNemar test p = 0.02 (57 images right only for the trained model, 34 right only for Gemini).
+  - Strong on Alternaria (100%), false smut (93%), BLB (73%) and sheath blight (67%).
+  - Weak on cotton bacterial blight (13%, confused with Alternaria; 68 training images) and brown spot (30%).
+  - It runs inside photo verification as a top-3 suggestion for the officer, never as a diagnosis.
+  - More images per class, and the YOLO-OBB boxes the Department exports, are the route to a stronger detector.
+- **Manual coordinates:** a photo whose location is typed in by hand cannot confirm a loss. It is marked "officer to verify before any payment", because coordinates can be copied from any parcel.
 
 ---
 
@@ -305,6 +314,57 @@ Spearman between season stress and CCE loss: −0.12 (p = 0.12).
   - an irrigation mask from e-Panta irrigation source to stop deficit cover running over canal-fed paddy
   - CCE-calibrated trigger levels per mandal once a longer CCE record is available
 
+### 7.5 Soil moisture (root zone and satellite) against CCE
+
+**Why:** a rainfall deficit only becomes crop stress through the soil, so a drought cover should be checked against soil water.
+
+**Data:** ERA5-Land root-zone soil moisture (0–100 cm, depth-weighted layers 1–3, 2000–2025) and SMAP L3 enhanced surface soil moisture (satellite L-band radiometer, 2016–2025). Both are monthly means per mandal over the crop's FAO-56 mid (reproductive) stage window, expressed as a percentile of the mandal's own record (`gee_py/soil_moisture.py`, `pipeline/p17_soil_moisture.py`).
+
+**Rule (declared before computing):** a drought trigger counts as "soil-confirmed" only if soil moisture is at or below its 20th percentile, the same 1-in-5 return period as the trigger.
+
+| YSR Kadapa, 166 mandal-crop-years (36% had a CCE loss below 80% of normal) | Fired | Share with real loss |
+|---|---|---|
+| Drought trigger alone | 14 | 29% |
+| Drought trigger + dry root zone (ERA5-Land) | 6 | 0% |
+| Drought trigger + dry surface (SMAP) | 9 | 11% |
+| Dry root zone alone | 13 | 8% |
+| Dry surface alone (SMAP) | 17 | 12% |
+
+**Reading:**
+- In YSR Kadapa, dry soil did **not** coincide with lost yield; dry seasons had fewer losses than average.
+- Irrigation (canal-fed paddy, drip cotton) decouples soil water from yield there, and the large losses of 2019–2025 came from excess rain and cyclones.
+- Soil moisture is therefore reported alongside each season decision as evidence, but it does not change payouts.
+- **Product implication for YSR:** build the cover around excess rain and cyclones, and restrict drought cover to rainfed parcels using an irrigation mask (e-Panta irrigation source).
+
+### 7.6 Estimated yield loss per decision (CCE-calibrated)
+
+The problem statement asks for *estimated yield loss* within 72 hours. Each decision now carries the distribution of real CCE losses observed when the same trigger type fired (`pipeline/p18_loss_calibration.py`):
+
+| When this fired (YSR, 2019–2025) | Median CCE loss | Middle 50% | Cases with >20% loss | n |
+|---|---|---|---|---|
+| Acute event (cyclone / extreme rain, ERA5) | 25% | 0–39% | 60% | 30 |
+| Drought trigger only | 10% | 0–39% | 36% | 11 |
+| Nothing fired | 0% | 0–28% | 32% | 115 |
+
+**Caveats:**
+- The samples are small: acute is mostly Nivar 2020, and drought is 2023.
+- The calibration is from YSR Kadapa only.
+- These figures are a first-day estimate for relief planning. Field and photo verification and CCE remain the basis for payment where the sensors disagree.
+
+### 7.7 Fused weather + satellite loss model (tested, not used)
+
+**What was tested:**
+- A logistic-regression and a gradient-boosted model combining rainfall stress, extreme-rain indices from both sources, cyclone, and MODIS VCI.
+- Tested leave-one-year-out against the CCE loss events, with normal yields recomputed inside each fold (`pipeline/p16_loss_model.py`).
+
+**Result:** out-of-sample AUC was **0.53 and 0.50**, no better than chance.
+
+**Why:** with seven years, the loss years are dominated by causes the features cannot see:
+- the under-read November 2021 floods
+- non-weather losses in 2022
+
+**Decision:** the model is not used, and no machine-learning claim is made for loss prediction.
+
 ## 8. Known limits
 
 1. Real CCE yields exist for YSR Kadapa only (2019–2025); none for Palnadu, Manyam or Chittoor, and no PMFBY claim amounts. Against CCE, weather triggers alone catch at most about a third of loss events (section 7.4).
@@ -318,7 +378,18 @@ Spearman between season stress and CCE loss: −0.12 (p = 0.12).
 
 ---
 
-## 9. Scaling
+## 9. Operations: alerts and automation
+
+- **Farmer and officer alerts (Telugu / English):** generated from every non-"no payout" decision (`pipeline/p19_alerts.py`; dashboard tab "Farmer alerts").
+  - **Payout:** damage confirmed, compensation processed.
+  - **Verification:** upload a geotagged field photo or wait for the AEO's visit.
+  - **Pending:** a drainage and disease advisory.
+  - Mandal names come in Telugu from e-Panta.
+  - The Telugu text is machine-drafted and must be reviewed by the Department before farmer use. No SMS gateway is connected in this POC.
+- **One command:** `py -3.13 poc/run_all.py` rebuilds triggers, validation, decisions, alerts and the dashboard from local data.
+- **Live refresh:** `py -3.13 poc/run_all.py --live <earth-engine-project>` first pulls this season's ERA5 and CHIRPS rainfall, rebuilds the event catalogues, and maps any new event with Sentinel-1 using the same frozen method.
+
+## 10. Scaling
 
 - **Everything runs from open data plus e-Panta:** CHIRPS, Sentinel-1/2, MODIS, IBTrACS and geoBoundaries.
 - **Adding a district** needs only its e-Panta extract and, for parcel level, its APAIMS cadastral.
@@ -326,7 +397,7 @@ Spearman between season stress and CCE loss: −0.12 (p = 0.12).
 
 ---
 
-## 10. References
+## 11. References
 - Allen R.G. et al. (1998) *Crop evapotranspiration*, FAO Irrigation and Drainage Paper 56.
 - Clement M.A., Kilsby C.G., Moore P. (2018) Multi-temporal SAR flood mapping using change detection. *J. Flood Risk Management* 11(2).
 - Funk C. et al. (2015) The CHIRPS dataset. *Scientific Data* 2.

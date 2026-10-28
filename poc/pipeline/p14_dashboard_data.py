@@ -86,7 +86,18 @@ if len(pcf) == 3:
 cce_f = DERIVED / "validation_cce_summary.json"
 cce = json.loads(cce_f.read_text(encoding="utf-8")) if cce_f.exists() else None
 
+def _json(name):
+    f = DERIVED / name
+    return json.loads(f.read_text(encoding="utf-8")) if f.exists() else None
+
+
+alerts_f = DERIVED / "alerts.csv"
+alerts = pd.read_csv(alerts_f, dtype={"district_code": str}).to_dict("records") if alerts_f.exists() else []
+
 data = dict(
+    soil=_json("validation_soil_summary.json"),
+    loss_cal=_json("loss_calibration.json"),
+    alerts=alerts,
     cce=cce,
     positive_control=pc,
     generated=str(pd.Timestamp.now().date()),

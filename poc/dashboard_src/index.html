@@ -47,6 +47,7 @@ ul.tight{margin:6px 0;padding-left:18px}ul.tight li{margin:3px 0}
   <button data-t="ev">Disaster events</button>
   <button data-t="se">Drought seasons</button>
   <button data-t="tr">Trigger &amp; premium design</button>
+  <button data-t="al">Farmer alerts</button>
   <button data-t="ph">Photo verification</button>
   <button data-t="va">Validation &amp; limits</button>
 </nav>
@@ -105,6 +106,14 @@ ul.tight{margin:6px 0;padding-left:18px}ul.tight li{margin:3px 0}
   <div class="card" style="margin-top:14px"><h2>Season payouts in the pilot mandals, 2015–2025 (% of sum insured)</h2><div class="tbl"><table id="payTbl"></table></div></div>
 </section>
 
+<section id="al" class="hidden">
+  <div class="card"><h2>Farmer and officer alerts (Telugu / English)</h2>
+    <div class="note" style="margin-top:0">Generated from each decision. Payout: damage confirmed, compensation processed. Verification: upload a geotagged field photo or wait for the AEO's visit. Telugu text is machine-drafted and must be reviewed by the Department before farmer use; no SMS gateway is connected in this POC.</div>
+    <p><select id="alSel"><option value="">All alerts</option></select></p>
+    <div id="alList"></div>
+  </div>
+</section>
+
 <section id="ph" class="hidden">
   <div class="grid g2">
     <div class="card"><h2>Submit a field photo</h2>
@@ -127,6 +136,10 @@ ul.tight{margin:6px 0;padding-left:18px}ul.tight li{margin:3px 0}
 
 <section id="va" class="hidden">
   <div class="card" style="margin-bottom:14px"><h2>Validation against real CCE yields (Department data)</h2><div id="cce"></div></div>
+  <div class="grid g2" style="margin-bottom:14px">
+    <div class="card"><h2>Soil moisture vs real CCE loss</h2><div id="soil"></div></div>
+    <div class="card"><h2>Estimated yield loss by trigger type (CCE-calibrated)</h2><div id="lcal"></div></div>
+  </div>
   <div class="grid g2">
     <div class="card"><h2>Interim validation (second sensor, not claims)</h2>
       <div class="tbl"><table id="valTbl"></table></div>
@@ -205,16 +218,17 @@ function showEvent(id) {
   const e = evMeta[id] || {}, rows = acute.filter(r => r.event_id === id);
   const h = e.hours;
   $("#evHead").innerHTML = `Radar image after event: <b>${e.post || "–"}</b> (${fmt(h)} h after the event ended) ${h <= 72 ? '<span class="tag PAY">inside 72 h</span>' : '<span class="tag VER">outside 72 h: cannot confirm on its own</span>'} · Otsu water threshold ${fmt(e.t_post, 1)} dB · orbit-matched pre-image: ${e.orbit_matched ? "yes" : "no"}`;
-  $("#evTbl").innerHTML = "<tr><th>Mandal</th><th>Crop</th><th class='n'>3-day rain (mm)</th><th class='n'>Return period (yr)</th><th>Cyclone</th><th class='n'>Standing acres</th><th class='n'>Flooded cropland</th><th class='n'>SAR noise floor</th><th>Planting window</th><th class='n'>Affected acres (est.)</th><th>Action</th></tr>" +
-    rows.map(r => `<tr><td>${r.mandal}</td><td>${r.crop}</td><td class="n">${fmt(r.rain_3day_mm)}${r.rain_source && r.rain_source.startsWith("ERA5") ? "*" : ""}</td><td class="n">${fmt(r.return_period_yr, 1)}</td><td>${r.cyclone ? "yes" : "no"}</td><td class="n">${fmt(r.standing_acres)}</td><td class="n">${fmt(r.flood_share_pct, 2)}%</td><td class="n">${r.sar_noise_floor_pct == null ? "pending" : fmt(r.sar_noise_floor_pct, 2) + "%"}</td><td>${r.paddy_planting_window ? '<span class="warn">paddy being planted</span>' : "no"}</td><td class="n">${fmt(r.affected_acres_est, 1)}</td><td>${tag(r.action)}</td></tr>`).join("") +
-    (rows.some(r => r.rain_source && r.rain_source.startsWith("ERA5")) ? "<tr><td colspan='11' class='note'>* ERA5, provisional: CHIRPS not yet published for these days.</td></tr>" : "");
+  $("#evTbl").innerHTML = "<tr><th>Mandal</th><th>Crop</th><th class='n'>3-day rain (mm)</th><th class='n'>Return period (yr)</th><th>Cyclone</th><th class='n'>Standing acres</th><th class='n'>Flooded cropland</th><th class='n'>SAR noise floor</th><th>Planting window</th><th class='n'>Affected acres (est.)</th><th class='n'>Est. yield loss</th><th>Action</th></tr>" +
+    rows.map(r => `<tr><td>${r.mandal}</td><td>${r.crop}</td><td class="n">${fmt(r.rain_3day_mm)}${r.rain_source && r.rain_source.startsWith("ERA5") ? "*" : ""}</td><td class="n">${fmt(r.return_period_yr, 1)}</td><td>${r.cyclone ? "yes" : "no"}</td><td class="n">${fmt(r.standing_acres)}</td><td class="n">${fmt(r.flood_share_pct, 2)}%</td><td class="n">${r.sar_noise_floor_pct == null ? "pending" : fmt(r.sar_noise_floor_pct, 2) + "%"}</td><td>${r.paddy_planting_window ? '<span class="warn">paddy being planted</span>' : "no"}</td><td class="n">${fmt(r.affected_acres_est, 1)}</td><td class="n" title="CCE-calibrated (YSR Kadapa), n=${r.est_loss_n}">${r.est_loss_median_pct == null ? "–" : fmt(r.est_loss_median_pct) + "% (" + r.est_loss_iqr + ")"}</td><td>${tag(r.action)}</td></tr>`).join("") +
+    (rows.some(r => r.rain_source && r.rain_source.startsWith("ERA5")) ? "<tr><td colspan='12' class='note'>* ERA5, provisional: CHIRPS not yet published for these days.</td></tr>" : "") +
+    "<tr><td colspan='12' class='note'>Est. yield loss = median real CCE loss (inter-quartile range) when this trigger type fired, YSR Kadapa 2019–2025.</td></tr>";
 }
 $("#evSel").onchange = e => showEvent(e.target.value); if (evs.length) showEvent(evs[0]);
 
 // Seasons
-$("#seTbl").innerHTML = "<tr><th>Season</th><th>Mandal</th><th>Crop</th><th>What drove it</th><th class='n'>Rainfall payout</th><th class='n'>VCI</th><th>Action</th></tr>" +
-  season.filter(r => cls(r.action) !== "NO").map(r => `<tr><td>${r.start.slice(0, 4)}</td><td>${r.mandal}</td><td>${r.crop}</td><td>${r.phase_driver}</td><td class="n">${fmt(r.season_payout_pct, 1)}%</td><td class="n">${fmt(r.vci)}</td><td>${tag(r.action)}</td></tr>`).join("") +
-  `<tr><td colspan="7" class="note">${season.filter(r => cls(r.action) === "NO").length} other pilot mandal-crop seasons: no trigger and no satellite stress → no payout.</td></tr>`;
+$("#seTbl").innerHTML = "<tr><th>Season</th><th>Mandal</th><th>Crop</th><th>What drove it</th><th class='n'>Rainfall payout</th><th class='n'>VCI</th><th class='n'>Soil moisture pct (root / SMAP)</th><th class='n'>Est. yield loss</th><th>Action</th></tr>" +
+  season.filter(r => cls(r.action) !== "NO").map(r => `<tr><td>${r.start.slice(0, 4)}</td><td>${r.mandal}</td><td>${r.crop}</td><td>${r.phase_driver}</td><td class="n">${fmt(r.season_payout_pct, 1)}%</td><td class="n">${fmt(r.vci)}</td><td class="n">${fmt(r.sm_root_pct)} / ${fmt(r.sm_smap_pct)}</td><td class="n">${r.est_loss_median_pct == null ? "–" : fmt(r.est_loss_median_pct) + "%"}</td><td>${tag(r.action)}</td></tr>`).join("") +
+  `<tr><td colspan="9" class="note">${season.filter(r => cls(r.action) === "NO").length} other pilot mandal-crop seasons: no trigger and no satellite stress → no payout.</td></tr>`;
 
 // Burn
 $("#burnTbl").innerHTML = "<tr><th>District</th><th>Crop</th><th class='n'>Burn cost (% SI)</th><th class='n'>Payout frequency</th></tr>" +
@@ -253,7 +267,7 @@ const API = location.protocol.startsWith("http") ? "" : null;
 if (API === null) { $("#phOffline").classList.remove("hidden"); $("#phForm").querySelector("button").disabled = true; }
 $("#phEvent").innerHTML += D.events.map(e => `<option value="${e.id}">${e.start} · ${D.districts[e.district_code]} · ${e.cyclone ? cyc(e.cyclone) : peril(e.types)}</option>`).join("");
 const esc = x => String(x ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c]);
-const vtag = v => `<span class="tag ${v.startsWith("PHOTO CONFIRMS") ? "PAY" : v.startsWith("INVALID") ? "VER" : "NO"}">${esc(v)}</span>`;
+const vtag = v => `<span class="tag ${v.startsWith("PHOTO CONFIRMS") ? "PAY" : (v.startsWith("INVALID") || v.includes("MANUAL GPS")) ? "VER" : "NO"}">${esc(v)}</span>`;
 function renderResult(r) {
   const mark = ok => ok === true ? "✔" : ok === false ? "✘" : "–";
   $("#phOut").innerHTML = `<p style="margin:0 0 8px">${vtag(r.verdict)}</p>${r.resolution ? `<p style="margin:0 0 8px"><b>${esc(r.resolution)}</b></p>` : ""}
@@ -298,6 +312,21 @@ if (C) {
   <li><b>2023–2024:</b> drought triggers fired but CCE losses were small: irrigated paddy buffered the deficit.</li>
   <li><b>Conclusion:</b> weather triggers alone catch about a third of real losses. That is why every disagreement goes to field / photo verification instead of an automatic payment or refusal. Both rainfall sources were chosen before this data arrived and are shown side by side.</li></ul>`;
 }
+if (D.soil) $("#soil").innerHTML = `<div class="note" style="margin-top:0">YSR Kadapa, ${D.soil.n} mandal-crop-years; ${fmt(100 * D.soil.base_rate)}% had a real CCE loss (yield &lt; 80% of normal). Soil moisture in the crop's reproductive stage, as a percentile of the mandal's own record; "dry" = 1-in-5 (20th percentile or lower).</div>
+  <div class="tbl"><table><tr><th>Rule</th><th class="n">Fired</th><th class="n">Share with real loss</th></tr>${D.soil.rows.map(r => `<tr><td>${r.rule}</td><td class="n">${r.fired}</td><td class="n">${r.precision == null ? "–" : fmt(100 * r.precision) + "%"}</td></tr>`).join("")}</table></div>
+  <div class="note">In YSR, dry soil did <b>not</b> mean lost yield: irrigation (canal paddy, drip cotton) buffers drought, and the big losses came from excess rain and cyclones. Soil moisture is shown as evidence but does not change payouts; drought cover here needs an irrigation mask.</div>`;
+if (D.loss_cal) $("#lcal").innerHTML = `<div class="tbl"><table><tr><th>When this fired</th><th class="n">Median CCE loss</th><th class="n">Middle 50%</th><th class="n">Cases &gt;20% loss</th><th class="n">n</th></tr>
+  ${[["acute", "Acute event (cyclone / extreme rain)"], ["drought", "Drought trigger only"], ["none", "Nothing fired"]].map(([k, l]) => { const c = D.loss_cal[k]; return `<tr><td>${l}</td><td class="n"><b>${fmt(c.median)}%</b></td><td class="n">${fmt(c.q25)}–${fmt(c.q75)}%</td><td class="n">${fmt(100 * c.share_loss_over_20)}%</td><td class="n">${c.n}</td></tr>`; }).join("")}</table></div>
+  <div class="note">These are the "estimated yield loss" values attached to each decision. Small samples, mostly 2020 (Nivar) for acute and 2023 for drought, and calibrated in YSR Kadapa only.</div>`;
+const AL = D.alerts || [];
+$("#alSel").innerHTML += [...new Set(AL.map(a => a.mandal))].map(m => `<option>${esc(m)}</option>`).join("");
+function showAlerts() {
+  const m = $("#alSel").value, list = AL.filter(a => !m || a.mandal === m);
+  $("#alList").innerHTML = list.length ? list.map(a => `<div class="card" style="margin:8px 0;padding:10px 12px"><div class="note" style="margin:0 0 6px">${esc(a.start)} · ${esc(D.districts[a.district_code])} · ${esc(a.mandal)} · ${tag(a.action)} · to: ${esc(a.audience)}</div>
+    <div lang="te" style="font-size:15px;margin-bottom:4px">${esc(a.telugu)}</div><div class="note" style="margin:0">${esc(a.english)}</div></div>`).join("") : "<div class='note'>No alerts.</div>";
+}
+$("#alSel").onchange = showAlerts; showAlerts();
+
 $("#sev").innerHTML = `<p style="margin:0">Sentinel-1 delivered a post-event image within 72 h for <b>${D.seventy_two.within} of ${D.seventy_two.events}</b> events. A 72-hour decision therefore relies on the daily rainfall trigger plus any radar or optical image available, and every result carries its image date. Where no image arrives in time, the case goes to field and photo verification instead of waiting.</p>`;
 </script>
 </body>
