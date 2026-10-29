@@ -81,8 +81,12 @@ if n:
 else:
     print("CHIRPS: nothing new published yet", flush=True)
 
+# 2b. GPM IMERG: fetch months not yet cached (the most recent months are always refetched)
+subprocess.run([sys.executable, str(POC / "gee_py" / "imerg.py"), sys.argv[1]], check=True, stdout=subprocess.DEVNULL)
+
 # 3. rebuild catalogues and the radar event list
-for args in (["p05_event_catalogue.py"], ["p05_event_catalogue.py", "rain_chirps_daily.parquet"], ["p08_flood_event_list.py"]):
+for args in (["p05_event_catalogue.py"], ["p05_event_catalogue.py", "rain_chirps_daily.parquet"],
+             ["p05_event_catalogue.py", "rain_imerg_daily.parquet"], ["p08_flood_event_list.py"]):
     subprocess.run([sys.executable, *args], check=True, stdout=subprocess.DEVNULL)
 
 # 4. radar flood maps for events that have no output yet

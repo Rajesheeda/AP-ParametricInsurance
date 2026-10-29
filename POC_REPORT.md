@@ -1,6 +1,6 @@
 # Parametric Insurance & Disaster Loss Assessment: POC technical report
 
-**Case 100075 · hierachAi Technologies · draft of 2026-10-08**
+**Case 100075 · hierachAi Technologies · draft of 2026-10-30**
 **Pilot:**
 - Kharif: Palnadu, YSR Kadapa, Parvathipuram Manyam.
 - Rabi: Chittoor, proposed in place of East Godavari because no East Godavari data was available.
@@ -11,9 +11,15 @@
 
 ## 1. Summary
 
-- **What we built:** an end-to-end pipeline. It takes department e-Panta and cadastral data plus open satellite and weather data, and produces a per-mandal, per-crop decision for every disaster event and season: **parametric payout**, **field / photo verification**, or **no payout**.
-- **Weather trigger:** cited methods only (IMD, ETCCDI, SPI, FAO-56, WBCIS structure, UN-SPIDER, Otsu, Kogan VCI). No hand-picked thresholds.
-- **Satellite confirmation:** gated by what the department data says is actually in the field. That is the crop and sowing date per parcel, so we know whether a crop was standing on the event date.
+**Design: two lanes, never mixed.**
+- **Lane 1, parametric insurance:** the payout is a formula on objective indices only, with no claim, no loss adjustment and no field visit, and no photo can change it. Each cover is a **dual trigger**: a rainfall index *and* an independent satellite index must both cross pre-agreed levels.
+  - **Cover A, season:** WBCIS term-sheet structure (FAO-56 stages; deficit, excess, dry spell) AND MODIS VCI < 35.
+  - **Cover B, catastrophe:** ERA5 3-day rain from the mandal's own 1-in-5 to 1-in-25 level AND Sentinel-1 flood on standing crops above the measured false-alarm level.
+  - **Each farmer's own calendar:** stages start at that booking's e-Panta sowing week, not at a mandal-wide date.
+  - **Index qualification gate:** a candidate index enters the contract only if it beats the base loss rate on the Department's own CCE yields (lower 95% bound of precision). The gate is re-run every season.
+- **Lane 2, disaster relief (SDRF input subsidy, ≥33% damage):** a 72-hour provisional assessment. Radar-mapped flooding on standing crops, a CCE-calibrated loss estimate, and enumeration by quality-gated, parcel-locked photo or AEO visit.
+- **Basis-risk log:** every case where the lanes disagree is recorded. Index levels change only between seasons.
+- **Methods:** cited published methods only (IMD, ETCCDI, SPI, FAO-56, WBCIS structure, UN-SPIDER, Otsu, Kogan VCI). No hand-picked thresholds.
 
 **Main findings**
 
@@ -28,12 +34,18 @@
 | Positive control: Budameru / Krishna floods, Sep 2024 (rule declared in advance) | **PASS:** 5.6% flooded cropland vs 1.4% dry floor; up to 21% in the flooded mandals |
 | **Real CCE losses caught by weather triggers alone** (YSR, 166 mandal-crop-years, loss = yield < 80% of normal) | **7%** season trigger only; **37%** with the acute layer on ERA5 (agreement 60%). Below the ≥75% target. |
 | Seasons where the rainfall trigger and satellite agree on drought | Gurazala 2023 (cotton, chilli, paddy) |
+| **Lane 1 product vs real CCE** (YSR, both covers dual-triggered) | **9 payouts, 7 to real losses** (78%, 95% CI 45–94%), against a 36% base rate; catches 12% of losses |
+| Same years, rainfall-only season cover (today's WBCIS structure) | 24 payouts, **20 with no real loss** (precision 17%) |
+| Rainfall source test: CHIRPS / ERA5 / GPM IMERG / 2-of-3 consensus (acute layer) | losses caught 10% / 37% / 47% / 37%; none catches the Nov 2021 floods (section 7.8) |
+| Per-farmer cover, 4 pilot mandals, Kharif 2023–25 | **221,555** e-Panta bookings priced on their own sowing week; **21,289** would flip between paid and not paid under a mandal calendar (section 7.10) |
+| Photo quality gate (thresholds from 982 Department photos) | **91%** of held-out genuine photos accepted, **100%** of blurred / dark / overexposed / low-resolution copies refused |
 | False-positive reduction from the standing-crop gate (Michaung 2023, YSR, parcel level) | **60%** of radar-flagged parcels removed (harvested or not yet sown) |
 
 **What this means**
-- In these inland, semi-arid and canal-irrigated pilot mandals, radar flood signal at mandal scale **cannot be told apart from routine field water**.
-- The system therefore **never auto-pays on radar alone**. It routes those cases to field and photo verification within the 72-hour window.
-- Automatic payout happens only where two independent sensors agree.
+- In YSR Kadapa, rainfall indices alone are a poor proxy for loss: irrigation buffers deficits, and much heavy rain does no damage. This is the basis risk of today's weather-index insurance, measured with the State's own yields.
+- So insurance pays only what two independent indices agree on, and only indices that pass the qualification gate. This removes most false payouts, at the price of detection.
+- The losses the index cannot see (2021 floods, 2022) are left to Lane 2 relief and PMFBY area-yield. They are logged as basis risk, not hidden.
+- Radar alone is never a payout signal: at mandal scale it cannot be told apart from routine field water without the e-Panta crop and planting gates.
 
 ---
 
@@ -133,27 +145,35 @@ The method follows the UN-SPIDER Recommended Practice for Sentinel-1 flood mappi
 
 ---
 
-## 5. Decision logic
+## 5. Decision logic: two lanes
 
-| Weather trigger | Satellite confirmation | Action |
+| | Lane 1: parametric insurance | Lane 2: disaster relief (SDRF) |
 |---|---|---|
-| yes | yes | **Parametric payout** |
-| yes | no | **Field / photo verification** |
-| no | yes | **Field / photo verification** (basis-risk catch) |
-| no | no | **No payout** |
+| Question | Did the pre-agreed indices cross their levels? | Was this farmer's crop really damaged ≥33%? |
+| Inputs | Rainfall index AND satellite index, only indices that passed the qualification gate | Radar map, e-Panta standing crops, CCE-calibrated loss estimate, photo / AEO |
+| Output | % of sum insured, by formula, per booking | Enumeration list, radar-flooded villages first |
+| Time | When the second index is observed (radar revisit 6–12 days; season end for Cover A) | 72-hour provisional, then enumeration |
+| Field evidence | **Never** used | Required |
 
-**Satellite confirmation, acute events.** All of these must hold:
-- Flooded cropland share is above the mandal's dry-control floor.
-- The radar image is **within 72 h** of the event.
-- The crop is **standing** on the event date: e-Panta sowing date ≤ event ≤ sowing date + FAO-56 duration.
+**Lane 1, Cover B satellite trigger.** All of these must hold:
+- The flooded cropland share is above the mandal's dry-control floor.
+- The crop is **standing** on the event date: e-Panta sowing date ≤ event ≤ sowing + FAO-56 duration.
 - No paddy is being planted around the event (e-Panta paddy sowing within −30/+15 days). Otherwise the radar "flood" may be puddling water.
 
-**Satellite confirmation, seasons:** VCI < 35.
+**Lane 1, Cover A satellite trigger:** VCI < 35 in the same mandal and season.
 
-**Photo verification (Module B).** Cases routed to field / photo verification are resolved with a geotagged photo, which counts as evidence only if every check passes:
+**Lane 2 priority:** "radar-mapped" when the Lane 1 satellite conditions hold on an image within 72 h; otherwise photo / AEO enumeration whenever any rainfall product or the radar shows a signal. Each case carries an **evidence grade**:
+- **A:** at least 2 of 3 rainfall products above their own 1-in-5 level, and an orbit-matched radar image within 72 h.
+- **B:** one of those two holds.
+- **C:** neither holds.
+
+**Basis-risk flags:** the lanes disagree, for example "relief signal, no index payout".
+
+**Photo verification (Module B), Lane 2 only.** A geotagged photo is relief evidence and feeds the basis-risk log; it never changes an insurance payout. It counts as evidence only if every check passes:
 
 | Check | How |
 |---|---|
+| Quality | Blur (variance of Laplacian), exposure, clipping, resolution; thresholds = percentiles of 982 Department field photos (section 7.11). A failing photo is refused before any other check ("retake") |
 | Geotag | GPS from the photo's EXIF; manual coordinates are accepted but marked lower trust |
 | Location | Point in pilot mandal; in YSR Kadapa, point in APAIMS parcel, compared with the claimed survey number |
 | Booking | e-Panta crop booked on that parcel for every season that can be standing on the photo date |
@@ -161,8 +181,8 @@ The method follows the UN-SPIDER Recommended Practice for Sentinel-1 flood mappi
 | Vision | Crop seen, damage class and confidence from a zero-shot vision-language model (Gemini); **not yet validated against field truth** |
 | Crop match | Crop seen agrees with the e-Panta booking |
 
-- **Outcome:** photo confirms loss → the case can close for payment. Photo shows no damage → closed without payment.
-- **Basis-risk catch:** a photo confirming loss where the system said "no payout" is referred for field verification.
+- **Outcome:** photo confirms loss → recorded for SDRF enumeration. Photo shows no damage → no relief evidence. Either way the insurance payout is unchanged.
+- **Basis-risk catch:** a photo confirming loss where the index did not pay (or showing no loss where it did) is logged for the season-end recalibration.
 - **Fallback rule:** the demo engine's rule-based fallback, used when no vision service answers, is never counted as evidence.
 - **Test:** a plain-colour image with a valid geotag inside parcel 24/A (Chapad) was rejected as "crop mismatch → field visit".
 
@@ -192,14 +212,34 @@ The method follows the UN-SPIDER Recommended Practice for Sentinel-1 flood mappi
   - Weak on cotton bacterial blight (13%, confused with Alternaria; 68 training images) and brown spot (30%).
   - It runs inside photo verification as a top-3 suggestion for the officer, never as a diagnosis.
   - More images per class, and the YOLO-OBB boxes the Department exports, are the route to a stronger detector.
-- **Manual coordinates:** a photo whose location is typed in by hand cannot confirm a loss. It is marked "officer to verify before any payment", because coordinates can be copied from any parcel.
+- **Manual coordinates:** a photo whose location is typed in by hand cannot confirm a loss. It is marked "officer to verify before enumeration", because coordinates can be copied from any parcel.
 
 ---
 
 ## 6. Results for the pilot mandals
 
-| | Parametric payout | Field / photo verification | No payout |
+| Pilot mandals × crops | Lane 1: index payout | Lane 2: relief enumeration only | Monitor only |
 |---|---|---|---|
+| Acute events (22 events) | 0 | 61 | 21 |
+| Drought seasons 2020–2025 | 3 | 9 | 35 |
+
+**Acute events**
+- Radar flood on cropland ranged from 0.02% to 3.4% per district, which is inside the dry-control range.
+- The radar image arrived within 72 h for 8 of 22 events.
+- No acute event met the Lane 1 satellite trigger on standing, non-planting crops, so there was no index payout. Relief enumeration opened wherever rainfall or radar showed a signal.
+
+**Drought**
+- **Gurazala, Kharif 2023:** the mid-season deficit trigger fired, with payouts of 29% (cotton), 22% (chilli) and 62% (paddy), and VCI was 30. Both indices agree, so the index pays.
+  - Per farmer, on own sowing dates: 13,096 bookings paid (section 7.10).
+- **Chapad, Sattenapalle and Khajipet, 2023:** the rainfall trigger fired but crops stayed greener (VCI 45–53), so there is no index payout and relief enumeration stays open.
+  - This is consistent with irrigation buffering the deficit, and is exactly where rainfall-only cover would have over-paid.
+
+**Live season, Kharif 2026 (Manyam)**
+- Heavy rain on 2–7 Jul, 9–13 Sep and 20–25 Sep 2026.
+- 20–25 Sep: all three rainfall products are above their own 1-in-5 level, and at least two are at or above their 1-in-25 level (CHIRPS 266–296 mm over 3 days).
+- Radar 96 h later showed flooded cropland below the false-alarm level, during paddy planting, so there is no index payout. Relief enumeration is open (evidence grade B).
+
+---|---|---|---|
 | Acute events (22 events × pilot mandals × crops) | 0 | 63 | 19 |
 | Drought seasons 2020–2025 | 3 | 9 | 35 |
 
@@ -365,12 +405,88 @@ The problem statement asks for *estimated yield loss* within 72 hours. Each deci
 
 **Decision:** the model is not used, and no machine-learning claim is made for loss prediction.
 
+### 7.8 Rainfall source: is the sensor the problem? (GPM IMERG added)
+
+**Why:** CHIRPS and ERA5 both missed the November 2021 YSR floods. If the miss were only a sensor problem, a better product should catch them.
+
+**Data:** GPM IMERG V07 (NASA; passive-microwave and IR retrievals merged with GPCC gauges, 0.1°, half-hourly), daily areal means for all 113 POC mandals, June 2000 to September 2026 (`gee_py/imerg.py`). The event catalogue uses the same p05 rules against IMERG's own record.
+
+**Rule (declared 2026-10-30 before computing):** the same acute-layer rule as section 7.4 on IMERG, plus "any of 3" and "2 of 3" products.
+
+| Acute layer source (with season trigger), loss = yield < 80% of normal | Losses caught | False alarms | Fired |
+|---|---|---|---|
+| CHIRPS | 10% | 87% | 46 |
+| ERA5 | 37% | 57% | 51 |
+| GPM IMERG | 47% | 67% | 86 |
+| Any of 3 | 49% | 70% | 96 |
+| 2 of 3 | 37% | 60% | 55 |
+
+**Reading:**
+- IMERG raises detection but also false alarms.
+- In 2021 (mean loss 41%), even the union of all three products fired in only 14% of mandal-crops.
+- The sensor is not the bottleneck: heavy rain is not the same as loss.
+
+### 7.9 Dual trigger and the index qualification gate
+
+**Data:** Sentinel-1 flood index for every acute-rain window flagged by any product in YSR during the crop season, 2019–2025 (17 windows × 40 mandals, `gee_py/sar_cce.py`, frozen method). VCI as in 7.1. Script: `pipeline/p22_dual_trigger.py`.
+
+**Declared 2026-10-30 before computing:**
+- Catastrophe cover = consensus (median of the CHIRPS / ERA5 / IMERG payouts, each linear from its own 1-in-5 to 1-in-25 level of the seasonal 3-day maximum) AND Sentinel-1 flood above the floor.
+- Season cover dual = season payout AND VCI < 35.
+
+| Candidate (YSR, n = 166, base loss rate 36%) | Paid | To real loss | Precision (95% CI) | Losses caught |
+|---|---|---|---|---|
+| Season cover, rainfall only (WBCIS structure) | 24 | 4 | 17% (7–36) | 7% |
+| MODIS VCI < 35 alone | 6 | 3 | 50% (19–81) | 5% |
+| Season cover dual: rainfall AND VCI | 1 | 1 | 100% (21–100) | 2% |
+| Cat cover, CHIRPS / ERA5 / IMERG alone | 41 / 27 / 34 | 5 / 20 / 6 | 12% / **74% (55–87)** / 18% | 8% / 34% / 10% |
+| Cat cover, 3-source consensus | 25 | 4 | 16% (6–35) | 7% |
+| Sentinel-1 flood alone | 52 | 17 | 33% (22–46) | 29% |
+| Dual: consensus AND Sentinel-1 (declared design) | 17 | 2 | 12% (3–34) | 3% |
+| **Dual: ERA5 AND Sentinel-1** | 8 | 6 | 75% (41–93) | 10% |
+| **Lane 1 product: season dual OR ERA5 × Sentinel-1** | 9 | 7 | **78% (45–94)** | 12% |
+
+**What happened, in order:**
+1. **The declared consensus design failed.** CHIRPS and IMERG flag October 2024, a season with about 2% loss.
+2. **Only ERA5 beat the base rate.** After seeing this, we set the **index qualification gate**: an index may enter the contract only if the lower bound of the Wilson 95% interval of its precision exceeds the base loss rate. The gate is re-applied every season on new CCE.
+3. **The contract's catastrophe cover is therefore ERA5 × Sentinel-1.** The choice was made after seeing the data. ERA5's hits are mostly cyclone Nivar 2020 (17 of 20), so Kharif 2026 CCE is its out-of-sample test.
+4. **The season dual trigger stays on probation.** It paid once in YSR, correctly; that is too few to judge, but it made no false payout. In Palnadu (Gurazala 2023) both its indices agreed.
+
+**Reading:** requiring a second, independent index cuts false payouts from 20 of 24 to 2 of 9, at the cost of detection. Losses with no weather or satellite signal (2021 harvest-stage damage, 2022) stay with relief and PMFBY area-yield.
+
+### 7.10 Each farmer's own sowing calendar
+
+**Method:** `pipeline/p23_farmer_payouts.py`.
+- Every e-Panta booking of the focus crops in Chapad and Khajipet (YSR) and Gurazala and Sattenapalle (Palnadu), Kharif 2023–25, gets its FAO-56 stages from its own sowing week.
+- Bookings are grouped into cohorts (mandal × crop × sowing week). Each cohort's 1-in-5 trigger and 1-in-25 exit come from 1995–2024 CHIRPS over that cohort's own stage windows, so early and late sowers have the same payout frequency by design.
+- The result is compared with the mandal-median calendar a WBCIS term sheet would use. 90 bookings sown outside 1 May – 28 Sep are outside the Kharif window.
+
+**Results:**
+- **221,555 bookings** were priced.
+- **21,289** cross the rainfall trigger under one calendar but not the other. For example:
+  - Chapad 2023 paddy: 2,838 bookings trigger on their own calendar, none on the mandal calendar.
+  - Gurazala 2023 cotton: 2,798 would be paid on the mandal calendar only.
+- With the satellite trigger applied, **Gurazala 2023 pays 13,096 bookings** (cotton, chilli, paddy; VCI 30), about 39% of sum insured acre-weighted.
+- YSR pilot mandals pay nothing in 2023–25: VCI was 45–95, and real CCE losses in those years were small.
+- **Look-up:** per-booking statements come from `GET /api/v1/poc/farmer/payouts`. Sum insured is an input, the notified scale of finance. No farmer names are used.
+
+### 7.11 Photo quality gate
+
+**Method (`poc/photo/quality.py`):**
+- **Measures:** sharpness = variance of the Laplacian (Pech-Pacheco et al. 2000); mean brightness; share of clipped pixels; shorter side in pixels. All are measured after resizing to 1024 px.
+- **Thresholds:** percentiles of 982 Department Label Studio field photos. Sharpness at the 5th percentile, which is **33**. Brightness between the 1st and 99th percentiles, **90–160**. Clipping at the 99th percentile, **1.5%**. Resolution at the 1st percentile, **716 px**.
+
+**Test on 491 held-out photos:**
+- **91%** of genuine photos were accepted.
+- **100%** of their blurred (radius 2 and 4), motion-blurred, darkened, overexposed and quarter-resolution copies were refused.
+- A refused photo is never judged: the farmer is asked to retake it.
+
 ## 8. Known limits
 
-1. Real CCE yields exist for YSR Kadapa only (2019–2025); none for Palnadu, Manyam or Chittoor, and no PMFBY claim amounts. Against CCE, weather triggers alone catch at most about a third of loss events (section 7.4).
+1. Real CCE yields exist for YSR Kadapa only (2019–2025); none for Palnadu, Manyam or Chittoor, and no PMFBY claim amounts. Against CCE, weather triggers alone catch at most about a third of loss events (section 7.4). The dual-trigger Lane 1 product is precise (7 of 9 payouts to real losses) but catches only 12% of losses, and its catastrophe index was chosen after seeing 2019–25 data (section 7.9).
 2. Parcel boundaries exist only for YSR (about 56% of villages). Palnadu and Manyam run at mandal level; mandal-level flood is spread over cropland in proportion to crop area.
-3. Sentinel-1 meets 72 h for 8 of 22 events. The system responds with the daily rainfall trigger plus field verification, and every result carries its image date.
-4. SAR cannot tell disaster flooding from paddy puddling or Rabi irrigation. The e-Panta planting gate and the dry-control floor handle this, at the cost of sending most acute cases to verification.
+3. Sentinel-1 meets 72 h for 8 of 22 events. Lane 2 relief responds inside 72 h with rainfall and photos; Lane 1 insurance settles when the radar image arrives. Every result carries its image date.
+4. SAR cannot tell disaster flooding from paddy puddling or Rabi irrigation. The e-Panta planting gate and the dry-control floor handle this, at the cost of blocking most acute index payouts in paddy (cases go to relief enumeration instead).
 5. FAO-56 stage lengths are generic: AP chilli runs longer than FAO "peppers", and local variety durations differ. Satellite phenology per parcel can replace them (data in hand for YSR 2023–26).
 6. Irrigation source is unknown for about 70% of YSR acreage and exists for Kharif 2026 only.
 7. CHIRPS lags about a month; September 2026 events use ERA5, marked provisional.
@@ -381,13 +497,12 @@ The problem statement asks for *estimated yield loss* within 72 hours. Each deci
 ## 9. Operations: alerts and automation
 
 - **Farmer and officer alerts (Telugu / English):** generated from every non-"no payout" decision (`pipeline/p19_alerts.py`; dashboard tab "Farmer alerts").
-  - **Payout:** damage confirmed, compensation processed.
-  - **Verification:** upload a geotagged field photo or wait for the AEO's visit.
-  - **Pending:** a drainage and disease advisory.
+  - **Index payout (Lane 1):** both indices crossed their levels, % of sum insured paid automatically, no claim or visit.
+  - **Relief enumeration (Lane 2):** upload a geotagged field photo or meet the AEO; radar-flooded villages first.
   - Mandal names come in Telugu from e-Panta.
   - The Telugu text is machine-drafted and must be reviewed by the Department before farmer use. No SMS gateway is connected in this POC.
 - **One command:** `py -3.13 poc/run_all.py` rebuilds triggers, validation, decisions, alerts and the dashboard from local data.
-- **Live refresh:** `py -3.13 poc/run_all.py --live <earth-engine-project>` first pulls this season's ERA5 and CHIRPS rainfall, rebuilds the event catalogues, and maps any new event with Sentinel-1 using the same frozen method.
+- **Live refresh:** `py -3.13 poc/run_all.py --live <earth-engine-project>` first pulls this season's ERA5, CHIRPS and GPM IMERG rainfall, rebuilds the event catalogues, and maps any new event with Sentinel-1 using the same frozen method.
 
 ## 10. Scaling
 
@@ -402,9 +517,13 @@ The problem statement asks for *estimated yield loss* within 72 hours. Each deci
 - Clement M.A., Kilsby C.G., Moore P. (2018) Multi-temporal SAR flood mapping using change detection. *J. Flood Risk Management* 11(2).
 - Funk C. et al. (2015) The CHIRPS dataset. *Scientific Data* 2.
 - Government of India (2016) *Manual for Drought Management*.
+- Government of India, Ministry of Home Affairs (2022) *Items and norms of assistance from SDRF / NDRF, 2022–26* (input subsidy where crop loss is 33% or more).
+- Huffman G.J. et al. (2023) *NASA GPM IMERG V07 Algorithm Theoretical Basis Document*.
 - Kogan F.N. (1995) Application of vegetation index and brightness temperature for drought detection. *Adv. Space Res.* 15(11).
 - McKee T.B., Doesken N.J., Kleist J. (1993) The relationship of drought frequency and duration to time scales. 8th Conf. Applied Climatology.
 - Otsu N. (1979) A threshold selection method from gray-level histograms. *IEEE Trans. SMC* 9(1).
+- Pech-Pacheco J.L. et al. (2000) Diatom autofocusing in brightfield microscopy: a comparative study. *Proc. 15th ICPR* 3.
+- Wilson E.B. (1927) Probable inference, the law of succession, and statistical inference. *JASA* 22(158).
 - Twele A. et al. (2016) Sentinel-1-based flood mapping: a fully automated processing chain. *Int. J. Remote Sensing* 37(13).
 - UN-SPIDER Recommended Practice: Flood mapping and damage assessment using Sentinel-1 SAR data in Google Earth Engine.
 - Zhang X. et al. (2011) Indices for monitoring changes in extremes (ETCCDI). *WIREs Climate Change* 2(6).

@@ -17,7 +17,7 @@ import os
 
 load_dotenv()
 
-from routers import district, parametric, photo, meta, poc_photo
+from routers import district, parametric, photo, meta, poc_photo, poc_farmer
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from routers.parametric import get_backtest_results, get_premium_table
@@ -86,6 +86,7 @@ app.include_router(district.router,    prefix="/api/v1")
 app.include_router(parametric.router,  prefix="/api/v1")
 app.include_router(photo.router,       prefix="/api/v1")
 app.include_router(poc_photo.router,   prefix="/api/v1")
+app.include_router(poc_farmer.router,  prefix="/api/v1")
 
 # POC dashboard (built by poc/pipeline/p14_dashboard_data.py), served same-origin with the photo API
 _POC_DASH = Path(__file__).resolve().parent.parent / "poc" / "data" / "dashboard"

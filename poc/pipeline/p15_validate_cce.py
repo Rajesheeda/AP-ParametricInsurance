@@ -130,6 +130,31 @@ for c, d in j.groupby("crop"):
 print("by year:", j.groupby("year").agg(loss=("loss_pct", "mean"), era5_system=("system_fired_era5", "mean")).round(2).to_dict("index"))
 j.to_csv(DERIVED / "validation_trigger_vs_cce.csv", index=False)
 
+# GPM IMERG V07 as a third, independent rainfall source and a multi-source consensus. Declared 2026-10-30
+# before computing: same qualifying rule as above on the IMERG catalogue (p05, own 2000-2024 climatology, so each
+# product is judged against its own record and its bias cancels). "Any of 3" fires when any product flags an
+# acute event in that mandal-season; "2 of 3" when at least two do (cyclones come from IBTrACS in all three).
+im_f = DERIVED / "event_catalogue_imerg.csv"
+if im_f.exists():
+    print("\n=== Acute layer from GPM IMERG and multi-source consensus (same rule)")
+    ei = pd.read_csv(im_f, dtype={"district_code": str})
+    ei["start"] = pd.to_datetime(ei.start)
+    ei["season_year"] = np.where(ei.start.dt.month == 1, ei.start.dt.year - 1, ei.start.dt.year)
+    qi = ei[((ei.type.isin(["extreme_rain", "unseasonal_rain"]) & (ei.peak_day_mm >= 64.5)) | (ei.type == "cyclone"))
+            & ((ei.start.dt.month >= 6) | (ei.start.dt.month == 1))]
+    j = j.merge(qi.groupby(["adm3_id", "season_year"]).size().rename("acute_imerg"), left_on=["adm3_id", "year"],
+                right_index=True, how="left")
+    votes = j[["acute_event", "acute_era5", "acute_imerg"]].notna().sum(axis=1)
+    j["system_fired_imerg"] = j.season_fired | j.acute_imerg.notna()
+    j["system_fired_any3"] = j.season_fired | (votes >= 1)
+    j["system_fired_2of3"] = j.season_fired | (votes >= 2)
+    for col, lab in [("system_fired_imerg", "season OR acute (IMERG)"), ("system_fired_any3", "season OR acute (any of 3)"),
+                     ("system_fired_2of3", "season OR acute (2 of 3)")]:
+        report_bin(j, col, lab)
+    print("by year:", j.groupby("year").agg(loss=("loss_pct", "mean"), imerg=("system_fired_imerg", "mean"),
+                                            any3=("system_fired_any3", "mean")).round(2).to_dict("index"))
+    j.to_csv(DERIVED / "validation_trigger_vs_cce.csv", index=False)
+
 # Summary for the dashboard / report
 import json  # noqa: E402
 
@@ -137,7 +162,12 @@ summary = {"n": int(len(j)), "mandals": int(j.adm3_id.nunique()), "crops": j.gro
            "years": [int(y) for y in sorted(j.year.unique())], "systems": [], "by_year": []}
 for col, label in [("season_fired", "Season trigger only (CHIRPS)"),
                    ("system_fired", "Season + acute event (CHIRPS)"),
-                   ("system_fired_era5", "Season + acute event (ERA5)")]:
+                   ("system_fired_era5", "Season + acute event (ERA5)"),
+                   ("system_fired_imerg", "Season + acute event (GPM IMERG)"),
+                   ("system_fired_any3", "Season + acute event (any of 3 sources)"),
+                   ("system_fired_2of3", "Season + acute event (2 of 3 sources)")]:
+    if col not in j:
+        continue
     for lvl in (70, 80, 90):
         loss = j.kg_ha < j.normal * lvl / 100
         f = j[col]
@@ -148,7 +178,9 @@ for col, label in [("season_fired", "Season trigger only (CHIRPS)"),
 for yr, d in j.groupby("year"):
     summary["by_year"].append(dict(year=int(yr), loss_pct=float(d.loss_pct.mean()), n=int(len(d)),
                                    season=float(d.season_fired.mean()), chirps=float(d.system_fired.mean()),
-                                   era5=float(d.system_fired_era5.mean())))
+                                   era5=float(d.system_fired_era5.mean()),
+                                   imerg=float(d.system_fired_imerg.mean()) if "system_fired_imerg" in d else None,
+                                   any3=float(d.system_fired_any3.mean()) if "system_fired_any3" in d else None))
 rho, p = spearmanr(j.S, j.loss_pct)
 summary["spearman_season"] = dict(rho=float(rho), p=float(p))
 (DERIVED / "validation_cce_summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")

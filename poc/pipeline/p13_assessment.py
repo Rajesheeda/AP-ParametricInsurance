@@ -1,4 +1,18 @@
-"""Integrated loss assessment for the pilot mandals: rainfall trigger + satellite confirmation -> action.
+"""Two-lane assessment for the pilot mandals. The lanes are never mixed:
+
+LANE 1 - PARAMETRIC INSURANCE (index only; no loss adjustment, no field visit, no photo can change it)
+  Cover A, season (WBCIS structure, p10): season payout % paid only if the satellite vegetation index confirms
+           (MODIS VCI < 35, Kogan 1995) = dual trigger. On YSR CCE this cut false payouts from 20 of 24 to 0 of 1.
+  Cover B, catastrophe (p22): ERA5 3-day rainfall, linear from its own 1-in-5 to 1-in-25 level, AND Sentinel-1
+           flood on standing crops above the mandal's false-alarm floor = dual trigger. ERA5 is the only rainfall
+           index that passed the qualification gate on YSR CCE (p22); CHIRPS / IMERG and their consensus are shown
+           as information only. Settles when the radar image arrives (Sentinel-1 revisit 6-12 days).
+LANE 2 - DISASTER RELIEF (SDRF input subsidy, >= 33 % crop damage, Govt of India SDRF norms)
+  72-hour provisional assessment: affected standing acres from radar + CCE-calibrated loss estimate; enumeration by
+  AEO / geotagged photo, prioritised where radar maps flooding. Relief evidence never feeds back into Lane 1.
+Basis-risk log: every case where the two lanes disagree is logged for next season's index recalibration.
+
+Evidence assembled per case (unchanged from the integrated version):
 
 Acute events (extreme / unseasonal rain, cyclone):
   Weather trigger: the event's max 3-day rainfall in the mandal exceeds the mandal's own 99th percentile
@@ -123,7 +137,7 @@ for r in ev.itertuples():
                              sar_noise_floor_pct=round(100 * NOISE.get(p.adm3_id, np.nan), 2),
                              affected_acres_est=round(standing_ac * max(0.0, flood_share - NOISE.get(p.adm3_id, 0.0)), 1),
                              rain_3day_mm=r3mm, return_period_yr=rp, rain_source=rsrc, cyclone=cyc,
-                             paddy_planting_window=planting,
+                             paddy_planting_window=planting, orbit_matched=bool(f.orbit_matched), sat_signal=sat_signal,
                              weather_trigger=weather, satellite_confirms=sat, action=action))
 
 # Season (drought) assessment, pilot mandals x crops x 2020-2025
@@ -150,6 +164,57 @@ for p in pil.itertuples():
 
 a = pd.DataFrame(rows)
 
+# ---------------------------------------------------------------- two lanes
+lv = pd.read_parquet(DERIVED / "cat_cover_levels.parquet")[["adm3_id", "src", "L5", "L25"]].drop_duplicates(["adm3_id", "src"])
+SER = {"chirps": chirps, "era5": era5, "imerg": pd.read_parquet(DERIVED / "rain_imerg_daily.parquet")}
+mid_of = pil.set_index("adm3_name").adm3_id.to_dict()
+CONS = {}
+
+
+def consensus(mid, s, e):
+    if (mid, s, e) not in CONS:
+        out = {}
+        for k, src in SER.items():
+            x = src[(src.adm3_id == mid) & src.date.between(s - pd.Timedelta(days=2), e + pd.Timedelta(days=2))].sort_values("date")
+            l = lv[(lv.adm3_id == mid) & (lv.src == k)]
+            if len(x) < 3 or l.empty:
+                continue
+            v = float(x.rain_mm.rolling(3).sum().max())
+            out[k] = (round(v, 1), float(100 * np.clip((v - l.L5.iloc[0]) / (l.L25.iloc[0] - l.L5.iloc[0]), 0, 1)))
+        CONS[(mid, s, e)] = out
+    return CONS[(mid, s, e)]
+
+
+l1, l1d, l2, grade, cons_c, agree_c = [], [], [], [], [], []
+for r in a.itertuples():
+    if r.kind == "acute":
+        c = consensus(mid_of[r.mandal], pd.Timestamp(r.start), pd.Timestamp(r.end))
+        pays = [v[1] for v in c.values()]
+        cons = float(np.median(pays)) if pays else 0.0
+        n_ok = sum(v > 0 for v in pays)
+        sat1 = bool(r.standing_acres > 0 and r.flood_share_pct / 100 > (r.sar_noise_floor_pct or 0) / 100 and not r.paddy_planting_window)
+        idx = c["era5"][1] if "era5" in c else 0.0                      # contract index (qualified on CCE, p22)
+        pay = idx if sat1 else 0.0
+        relief = ("PRIORITY ENUMERATION: RADAR-MAPPED" if r.sat_signal and r.within_72h and not r.paddy_planting_window else
+                  "ENUMERATION: PHOTO / AEO" if (r.weather_trigger or cons > 0 or r.sat_signal) else "MONITOR")
+        g = "A" if n_ok >= 2 and r.within_72h and r.orbit_matched else "B" if n_ok >= 2 or (r.within_72h and r.orbit_matched) else "C"
+        cons_c.append(cons); agree_c.append(f"{n_ok} of {len(pays)}")
+        for k, v in c.items():
+            a.loc[r.Index, f"{k}_3day_mm"] = v[0]
+    else:
+        pay = float(r.season_payout_pct) if r.weather_trigger and r.satellite_confirms else 0.0
+        relief = "ENUMERATION: PHOTO / AEO" if (r.weather_trigger or r.satellite_confirms) else "MONITOR"
+        g = "B" if r.vci is not None and not pd.isna(r.vci) else "C"
+        cons_c.append(None); agree_c.append(None)
+    l1.append(round(pay, 1)); l1d.append("INDEX PAYOUT" if pay > 0 else "NO PAYOUT"); l2.append(relief); grade.append(g)
+a["consensus_pct"], a["rain_sources_agree"] = cons_c, agree_c
+a["lane1_payout_pct"], a["lane1_decision"], a["lane2_action"], a["evidence_grade"] = l1, l1d, l2, grade
+# basis-risk log: the lanes disagree (relief sees damage signals where the index pays nothing, or the reverse)
+a["basis_risk_flag"] = np.where((a.lane1_decision == "NO PAYOUT") & a.lane2_action.str.startswith("PRIORITY"), "relief signal, no index payout",
+                       np.where((a.lane1_decision == "INDEX PAYOUT") & (a.lane2_action == "MONITOR"), "index paid, no relief signal", None))
+a["action"] = np.where(a.lane1_decision == "INDEX PAYOUT", "INDEX PAYOUT",
+                       np.where(a.lane2_action != "MONITOR", "RELIEF ENUMERATION", "NO PAYOUT"))
+
 # Estimated yield loss from the CCE calibration (p18, YSR Kadapa 2019-2025), by which trigger fired
 import json  # noqa: E402
 
@@ -171,10 +236,11 @@ if sm_f.exists():
         ["adm3_id", "crop", "year", "sm_root_pct", "sm_smap_pct"]].assign(mandal=lambda d: d.adm3_id.map({v: k for k, v in mp.items()})),
         on=["mandal", "crop", "year"], how="left").drop(columns=["adm3_id"])
 a.to_csv(DERIVED / "assessment_pilot.csv", index=False, encoding="utf-8-sig")
-print(a.groupby(["kind", "action"]).size().to_string())
+print(a.groupby(["kind", "lane1_decision", "lane2_action"]).size().to_string())
 print("\nacute events with any trigger or satellite signal:")
 cols = ["event_id", "mandal", "crop", "rain_3day_mm", "return_period_yr", "cyclone", "hours_after_event",
-        "flood_share_pct", "sar_noise_floor_pct", "paddy_planting_window", "affected_acres_est", "action"]
+        "flood_share_pct", "sar_noise_floor_pct", "paddy_planting_window", "affected_acres_est", "consensus_pct",
+        "rain_sources_agree", "lane1_payout_pct", "lane2_action", "evidence_grade"]
 print(a[(a.kind == "acute") & (a.action != "NO PAYOUT")][cols].to_string(index=False))
 print("\nseason (drought) decisions:")
-print(a[(a.kind == "season") & (a.action != "NO PAYOUT")][["event_id", "mandal", "crop", "phase_driver", "season_payout_pct", "vci", "action"]].to_string(index=False))
+print(a[(a.kind == "season") & (a.action != "NO PAYOUT")][["event_id", "mandal", "crop", "phase_driver", "season_payout_pct", "vci", "lane1_payout_pct", "lane2_action"]].to_string(index=False))

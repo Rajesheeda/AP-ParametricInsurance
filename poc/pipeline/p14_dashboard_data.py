@@ -110,7 +110,18 @@ if pest_model:
     pest_model = {k: pest_model[k] for k in ("test_accuracy", "ci95", "n_test", "n_train", "removed_near_duplicates",
                                              "gemini_same_images", "model_same_images", "mcnemar_p") if k in pest_model}
 
+# Lane 1 per-farmer payouts (p23): one row per e-Panta booking, short keys to keep the file small
+# per-booking look-up is served by the backend (GET /api/v1/poc/farmer/payouts); only the summary is embedded
+farmers = None
+pq_f = POC / "data" / "photo_quality.json"
+cat_f = DERIVED / "cat_cover_events.csv"
+
 data = dict(
+    dual=_json("dual_trigger_validation.json"),
+    farmer_summary=_json("farmer_payouts_summary.json"),
+    farmers=farmers,
+    cat_events=pd.read_csv(cat_f).replace({np.nan: None}).to_dict("records") if cat_f.exists() else [],
+    photo_quality=json.loads(pq_f.read_text(encoding="utf-8")) if pq_f.exists() else None,
     pest_model=pest_model,
     media=media,
     img=img,

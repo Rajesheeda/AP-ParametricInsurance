@@ -1,6 +1,10 @@
 """POC photo verification (Module B): is this photo valid evidence for this parcel, crop and event?
 
+Role (two-lane design): photos are evidence for Lane 2 (disaster relief / SDRF damage enumeration) and for the
+basis-risk log. They NEVER change a Lane 1 insurance payout, which is decided by the index alone.
+
 Checks, each reported separately:
+  0. quality     - blur / exposure / resolution gate, thresholds measured on Department field photos (quality.py)
   1. geotag      - GPS from EXIF (manual coordinates accepted but marked lower trust)
   2. location    - pilot-district mandal (geoBoundaries ADM3); in YSR Kadapa the APAIMS cadastral parcel
   3. survey      - parcel survey number matches the claimed one (when claimed)
@@ -8,7 +12,7 @@ Checks, each reported separately:
   5. timing      - photo taken after the event started and within the verification window
   6. vision      - crop seen, damage class, confidence (zero-shot vision-language model, not a validated classifier)
   7. crop match  - crop seen agrees with the e-Panta booking
-Verdict: INVALID EVIDENCE (field visit) / PHOTO CONFIRMS LOSS / PHOTO DOES NOT CONFIRM LOSS.
+Verdict: RETAKE PHOTO / INVALID EVIDENCE (field visit) / PHOTO CONFIRMS LOSS / PHOTO DOES NOT CONFIRM LOSS.
 """
 import io
 import json
@@ -25,6 +29,9 @@ from shapely.geometry import Point
 POC = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(POC / "pipeline"))
 from common import DERIVED, base_survey, norm_survey  # noqa: E402
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import quality  # noqa: E402
 
 LOG = POC / "data" / "photo_evidence.jsonl"
 VERIFY_WINDOW_DAYS = 30   # policy setting: photos accepted from event start to 30 days after event end
@@ -99,6 +106,12 @@ def verify(image_bytes, claimed_crop=None, claimed_survey=None, lat=None, lon=No
     m, cad, ep, events, assess = layers()
     checks, ctx = [], {}
     ex = read_exif(image_bytes)
+    try:
+        q = quality.check(Image.open(io.BytesIO(image_bytes)).convert("RGB"))
+    except Exception as e:  # unreadable file
+        q = dict(ok=False, detail=f"unreadable image ({type(e).__name__})", measures=None)
+    checks.append(dict(check="photo quality", ok=q["ok"], detail=q["detail"],
+                       note="limits = percentiles of the Department's own field photos"))
 
     # 1. geotag
     if ex["lat"] is not None:
@@ -185,8 +198,10 @@ def verify(image_bytes, claimed_crop=None, claimed_survey=None, lat=None, lon=No
                            note="suggestion for the officer: 60% held-out accuracy on 8 post-flood paddy/cotton classes"))
 
     # verdict
-    hard =[c for c in checks if c["check"] in ("location", "survey number", "timing", "crop match", "e-Panta booking") and c["ok"] is False]
-    if not src or hard:
+    hard = [c for c in checks if c["check"] in ("location", "survey number", "timing", "crop match", "e-Panta booking") and c["ok"] is False]
+    if q["ok"] is False:
+        verdict = "RETAKE PHOTO: " + q["detail"]
+    elif not src or hard:
         verdict = "INVALID EVIDENCE: FIELD VISIT"
     elif vis is None:
         verdict = "CHECKS PASSED: VISION UNAVAILABLE, FIELD VISIT" if vision_down else "CHECKS PASSED: VISION PENDING"
@@ -198,21 +213,27 @@ def verify(image_bytes, claimed_crop=None, claimed_survey=None, lat=None, lon=No
     case = None
     if ev is not None and "mandal" in ctx:
         a = assess[(assess.event_id == event_id) & (assess.mandal == ctx["mandal"])]
-        case = a[["crop", "action"]].to_dict("records")
+        keep = [c for c in ["crop", "lane1_decision", "lane1_payout_pct", "lane2_action"] if c in a]
+        case = a[keep].to_dict("records")
     resolution = None
     if case:
-        acts = {c["action"] for c in case if not expect or c["crop"] == expect} or {c["action"] for c in case}
-        if verdict.startswith("INVALID"):
-            resolution = "Evidence not usable: send field officer."
+        rows = [c for c in case if not expect or c["crop"] == expect] or case
+        paid = any(c.get("lane1_decision") == "INDEX PAYOUT" for c in rows)
+        ins = ("Insurance (Lane 1) is decided by the index only and is unchanged: "
+               + ("index payout " + ", ".join(f"{c['crop']} {c['lane1_payout_pct']:.0f}%" for c in rows if c.get("lane1_decision") == "INDEX PAYOUT")
+                  if paid else "no index payout") + ".")
+        if verdict.startswith("RETAKE"):
+            resolution = "Photo rejected before any check: farmer asked to retake it in the app. " + ins
+        elif verdict.startswith("INVALID"):
+            resolution = "Relief (Lane 2): photo not usable, AEO enumeration visit. " + ins
         elif verdict == "PHOTO CONFIRMS LOSS":
-            resolution = ("Loss confirmed by photo: case can be closed for payment." if "FIELD / PHOTO VERIFICATION" in acts else
-                          "Photo contradicts 'no payout': refer for field verification (basis-risk catch)." if "NO PAYOUT" in acts else
-                          "Consistent with parametric payout.")
+            resolution = ("Relief (Lane 2): damage evidence recorded for SDRF enumeration. " + ins
+                          + ("" if paid else " Loss seen where the index did not pay: logged as a basis-risk case for recalibration."))
         elif verdict.startswith("PHOTO SHOWS DAMAGE: MANUAL GPS"):
-            resolution = "Damage visible but location typed in by hand: AEO to verify the field before any payment."
+            resolution = "Relief (Lane 2): damage visible but location typed by hand, AEO to verify before enumeration. " + ins
         elif verdict == "PHOTO DOES NOT CONFIRM LOSS":
-            resolution = ("Photo shows no damage: verification case closed without payment." if "FIELD / PHOTO VERIFICATION" in acts else
-                          "Photo contradicts payout: flag for audit." if "PARAMETRIC PAYOUT" in acts else "Consistent with no payout.")
+            resolution = ("Relief (Lane 2): no damage evidence for enumeration. " + ins
+                          + (" Index paid where the photo shows no loss: logged as a basis-risk case for recalibration." if paid else ""))
     rec = dict(time=datetime.now().isoformat(timespec="seconds"), event_id=event_id, lat=lat, lon=lon, gps_source=src,
                taken=taken.isoformat() if taken else None, context=ctx, checks=checks, verdict=verdict,
                estimated_photo_loss_pct=vis.get("estimated_photo_loss_pct") if vis else None,

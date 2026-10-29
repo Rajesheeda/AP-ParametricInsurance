@@ -1,6 +1,7 @@
 """Farmer / officer alerts in Telugu and English from the pilot decisions (no SMS gateway: text only).
 
-One alert per pilot mandal x event x action (crops grouped). NO PAYOUT decisions produce no alert.
+One alert per pilot mandal x event x action (crops grouped): Lane 1 index payout or Lane 2 relief enumeration.
+NO PAYOUT decisions produce no alert.
 Telugu text is machine-drafted and must be reviewed by the Department before any farmer-facing use.
 Output: alerts.csv
 """
@@ -35,17 +36,23 @@ for (eid, kind, mandal, action), g in a[a.action != "NO PAYOUT"].groupby(["event
     loss = g.est_loss_median_pct.dropna()
     loss_en = f" Estimated yield loss about {loss.median():.0f}% (calibrated on Department CCE, YSR Kadapa)." if len(loss) and loss.median() > 0 else ""
     loss_te = f" అంచనా దిగుబడి నష్టం సుమారు {loss.median():.0f}%." if len(loss) and loss.median() > 0 else ""
-    if action.startswith("PARAMETRIC"):
-        en = (f"{mandal} mandal: {en_p} damage to {crops_en} is confirmed by both weather and satellite data.{loss_en} "
-              f"Compensation will be processed. No field visit is needed.")
-        te = (f"{m_te} మండలం: {crops_te} పంటకు {te_p} వల్ల నష్టం జరిగినట్లు వాతావరణ, ఉపగ్రహ సమాచారం రెండూ నిర్ధారించాయి.{loss_te} "
-              f"పరిహారం ప్రక్రియ ప్రారంభమవుతుంది. క్షేత్ర పరిశీలన అవసరం లేదు.")
-        audience = "farmers"
-    elif action.startswith("FIELD"):
-        en = (f"{mandal} mandal: {en_p} recorded. To confirm damage to {crops_en}, upload a photo of your field with "
-              f"location switched on, or wait for the agriculture officer's field visit.")
-        te = (f"{m_te} మండలంలో {te_p} నమోదైంది. {crops_te} పంట నష్టం నిర్ధారణ కోసం ఫోన్‌లో లొకేషన్ ఆన్ చేసి మీ పొలం "
-              f"ఫోటోను పంపండి, లేదా వ్యవసాయ అధికారి క్షేత్ర పరిశీలన కోసం వేచి ఉండండి.")
+    if action == "INDEX PAYOUT":
+        pay = g.lane1_payout_pct.max()
+        en = (f"{mandal} mandal: the insurance index for {crops_en} was triggered by {en_p} (weather and satellite indices "
+              f"both crossed their pre-agreed levels). Payout {pay:.0f}% of the sum insured goes to insured farmers' accounts "
+              f"automatically. No claim form, no field visit.")
+        te = (f"{m_te} మండలం: {te_p} కారణంగా {crops_te} పంట బీమా సూచిక ప్రేరేపించబడింది (వాతావరణ, ఉపగ్రహ సూచికలు రెండూ "
+              f"ముందుగా నిర్ణయించిన స్థాయిని దాటాయి). బీమా మొత్తంలో {pay:.0f}% పరిహారం బీమా చేసిన రైతుల ఖాతాలకు నేరుగా జమ అవుతుంది. "
+              f"దరఖాస్తు అవసరం లేదు, క్షేత్ర పరిశీలన అవసరం లేదు.")
+        audience = "insured farmers"
+    elif action == "RELIEF ENUMERATION":
+        pri = (g.lane2_action.str.startswith("PRIORITY")).any()
+        en = (f"{mandal} mandal: {en_p} recorded. Disaster relief (input subsidy) damage enumeration is open for {crops_en}"
+              + (" — radar shows flooded fields, priority villages first." if pri else ".")
+              + f"{loss_en} Upload a photo of your field with location switched on, or meet the agriculture officer at the field visit.")
+        te = (f"{m_te} మండలంలో {te_p} నమోదైంది. {crops_te} పంటకు విపత్తు సహాయం (ఇన్‌పుట్ సబ్సిడీ) నష్ట గణన ప్రారంభమైంది"
+              + (" — ఉపగ్రహ రాడార్ ముంపు చూపిన గ్రామాలకు ముందుగా." if pri else ".")
+              + f"{loss_te} ఫోన్‌లో లొకేషన్ ఆన్ చేసి మీ పొలం ఫోటో పంపండి, లేదా వ్యవసాయ అధికారి క్షేత్ర పరిశీలనకు హాజరవ్వండి.")
         audience = "farmers + AEO"
     else:
         en = (f"{mandal} mandal: {en_p} recorded this season. Drain standing water from fields and watch {crops_en} "
