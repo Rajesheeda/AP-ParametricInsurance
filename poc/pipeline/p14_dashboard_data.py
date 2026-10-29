@@ -94,7 +94,26 @@ def _json(name):
 alerts_f = DERIVED / "alerts.csv"
 alerts = pd.read_csv(alerts_f, dtype={"district_code": str}).to_dict("records") if alerts_f.exists() else []
 
+# real images (p21): Sentinel-2 / Sentinel-1 thumbnails and Department field photos, embedded as data URIs
+import base64  # noqa: E402
+
+IMGDIR = OUT / "img"
+media, img = None, {}
+if (IMGDIR / "manifest.json").exists():
+    media = json.loads((IMGDIR / "manifest.json").read_text(encoding="utf-8"))
+    for f in IMGDIR.glob("*.jpg"):
+        img[f.name] = "data:image/jpeg;base64," + base64.b64encode(f.read_bytes()).decode()
+
+pm_f = POC / "data" / "pest_model" / "metrics.json"
+pest_model = json.loads(pm_f.read_text(encoding="utf-8")) if pm_f.exists() else None
+if pest_model:
+    pest_model = {k: pest_model[k] for k in ("test_accuracy", "ci95", "n_test", "n_train", "removed_near_duplicates",
+                                             "gemini_same_images", "model_same_images", "mcnemar_p") if k in pest_model}
+
 data = dict(
+    pest_model=pest_model,
+    media=media,
+    img=img,
     soil=_json("validation_soil_summary.json"),
     loss_cal=_json("loss_calibration.json"),
     alerts=alerts,

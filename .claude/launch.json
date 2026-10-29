@@ -13,6 +13,12 @@
       "runtimeArgs": ["-m", "uvicorn", "main:app", "--app-dir", "ap-cropguard-backend", "--host", "127.0.0.1", "--port", "8010"],
       "port": 8010,
       "url": "http://127.0.0.1:8010"
+    },
+    {
+      "name": "poc-dashboard-static",
+      "runtimeExecutable": "C:\\Users\\rajes\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+      "runtimeArgs": ["-m", "http.server", "8012", "--bind", "127.0.0.1", "--directory", "poc/data/dashboard"],
+      "port": 8012
     }
   ]
 }
