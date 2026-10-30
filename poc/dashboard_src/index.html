@@ -10,17 +10,17 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{
-  --bg:#061634;--bg2:#0b2456;--panel:rgba(18,48,108,.50);--panel2:rgba(24,60,128,.45);--line:rgba(125,175,255,.18);--line2:rgba(125,175,255,.30);
+  --bg:#08132a;--bg2:#0d1d3d;--panel:rgba(22,38,72,.55);--panel2:rgba(26,44,82,.50);--line:rgba(125,165,230,.14);--line2:rgba(125,165,230,.24);
   --ink:#f1f6ff;--ink2:#cbdaf6;--muted:#93aad4;--teal:#38bdf8;--cyan:#22d3ee;--violet:#6366f1;--lime:#a3e635;
   --grad:linear-gradient(135deg,#22d3ee 0%,#3b82f6 50%,#6366f1 100%);
   --pay:#34d399;--ver:#fbbf24;--no:#94a3b8;--pend:#60a5fa;--bad:#f87171;
   --r:16px;--font:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;--disp:"Space Grotesk","Inter",sans-serif;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:linear-gradient(160deg,#04102b 0%,#082766 45%,#061a46 100%) fixed;color:var(--ink);font:14px/1.5 var(--font);-webkit-font-smoothing:antialiased}
+html,body{margin:0;background:linear-gradient(160deg,#070f22 0%,#0a1934 50%,#08132a 100%) fixed;color:var(--ink);font:14px/1.5 var(--font);-webkit-font-smoothing:antialiased}
 body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
-  background:radial-gradient(900px 620px at 88% -8%,rgba(59,130,246,.38),transparent 62%),radial-gradient(760px 520px at -8% 18%,rgba(34,211,238,.20),transparent 60%),radial-gradient(800px 560px at 55% 115%,rgba(99,102,241,.30),transparent 62%),
-    linear-gradient(rgba(125,175,255,.055) 1px,transparent 1px) 0 0/44px 44px,linear-gradient(90deg,rgba(125,175,255,.055) 1px,transparent 1px) 0 0/44px 44px}
+  background:radial-gradient(900px 620px at 88% -8%,rgba(59,130,246,.12),transparent 62%),radial-gradient(760px 520px at -8% 18%,rgba(34,211,238,.06),transparent 60%),radial-gradient(800px 560px at 55% 115%,rgba(99,102,241,.08),transparent 62%),
+    linear-gradient(rgba(125,175,255,.03) 1px,transparent 1px) 0 0/44px 44px,linear-gradient(90deg,rgba(125,175,255,.03) 1px,transparent 1px) 0 0/44px 44px}
 a{color:var(--teal)}
 .app{position:relative;z-index:1;display:grid;grid-template-columns:248px 1fr;min-height:100vh}
 /* sidebar */
@@ -49,7 +49,7 @@ a{color:var(--teal)}
 section{display:none;animation:fade .35s ease}
 section.show{display:block}
 @keyframes fade{from{transform:translateY(6px)}to{transform:none}}
-.card{background:linear-gradient(160deg,rgba(28,70,150,.42),rgba(14,38,92,.50));border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;backdrop-filter:blur(14px);box-shadow:0 14px 44px -22px rgba(2,10,40,.9),inset 0 1px 0 rgba(160,200,255,.10)}
+.card{background:linear-gradient(160deg,rgba(24,40,76,.62),rgba(15,27,54,.70));border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;backdrop-filter:blur(14px);box-shadow:0 14px 44px -22px rgba(2,10,40,.9),inset 0 1px 0 rgba(160,200,255,.10)}
 .card h3{margin:0 0 4px;font-family:var(--disp);font-size:16px;font-weight:600}
 .card .cap{color:var(--muted);font-size:12.5px;margin:0 0 12px}
 .grid{display:grid;gap:16px}.grid>*{min-width:0}.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g5{grid-template-columns:repeat(5,1fr)}
