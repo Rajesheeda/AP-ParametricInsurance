@@ -93,6 +93,15 @@ _POC_DASH = Path(__file__).resolve().parent.parent / "poc" / "data" / "dashboard
 if _POC_DASH.exists():
     app.mount("/poc", StaticFiles(directory=_POC_DASH, html=True), name="poc-dashboard")
 
+
+@app.middleware("http")
+async def _no_cache_dashboard(request, call_next):
+    # the dashboard is rebuilt often; a cached copy showed stale results during review
+    response = await call_next(request)
+    if request.url.path.startswith("/poc"):
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
 # Backtest and insurance endpoints also accessible without /parametric prefix
 app.add_api_route(
     "/api/v1/backtest/results",
