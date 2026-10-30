@@ -21,6 +21,15 @@
 - **Basis-risk log:** every case where the lanes disagree is recorded. Index levels change only between seasons.
 - **Methods:** cited published methods only (IMD, ETCCDI, SPI, FAO-56, WBCIS structure, UN-SPIDER, Otsu, Kogan VCI). No hand-picked thresholds.
 
+**PoC success criteria: status**
+
+| Target (PPT) | Status | Why |
+|---|---|---|
+| ≥75% correlation, triggers vs actual losses | **Not measurable with the data shared** | CCE exists for 1 of 4 districts and 7 seasons, and there are no PMFBY claims. Losses cluster by season, so 166 mandal-crop-years carry about 14 independent observations. A true r = 0.75 over 7 seasons has a 95% CI of −0.01 to 0.96; testing it needs about 25 seasons (section 7.13). |
+| ≥80% flood accuracy vs APSDMA | **No reference data shared** | Replaced by a positive control declared in advance (Budameru 2024: PASS) and a measured false-alarm floor per mandal. |
+| Loss assessment within 72 h | **Met for relief (Lane 2)** | Daily rainfall plus radar when it arrives (8 of 22 events inside 72 h); every result carries its image time. |
+| 5-year back-test vs PMFBY and CCE | **Done on what exists** | CCE 2019–2025 (YSR); premium back-test 2001–2024 for all Kharif pilot districts; no PMFBY claim amounts shared. |
+
 **Main findings**
 
 | Finding | Number |
@@ -38,6 +47,7 @@
 | Same years, rainfall-only season cover (today's WBCIS structure) | 24 payouts, **20 with no real loss** (precision 17%) |
 | Rainfall source test: CHIRPS / ERA5 / GPM IMERG / 2-of-3 consensus (acute layer) | losses caught 10% / 37% / 47% / 37%; none catches the Nov 2021 floods (section 7.8) |
 | Per-farmer cover, 4 pilot mandals, Kharif 2023–25 | **221,555** e-Panta bookings priced on their own sowing week; **21,289** would flip between paid and not paid under a mandal calendar (section 7.10) |
+| **Premium, pure burn cost 2001–2024** (section 7.12) | Season cover **13.2% → 2.5%** of sum insured with the dual trigger; YSR both covers **5.9%** (4.3–8.2%) vs 24.9% rainfall-only |
 | Photo quality gate (thresholds from 982 Department photos) | **91%** of held-out genuine photos accepted, **100%** of blurred / dark / overexposed / low-resolution copies refused |
 | False-positive reduction from the standing-crop gate (Michaung 2023, YSR, parcel level) | **60%** of radar-flagged parcels removed (harvested or not yet sown) |
 
@@ -481,6 +491,48 @@ The problem statement asks for *estimated yield loss* within 72 hours. Each deci
 - **100%** of their blurred (radius 2 and 4), motion-blurred, darkened, overexposed and quarter-resolution copies were refused.
 - A refused photo is never judged: the farmer is asked to retake it.
 
+### 7.12 Premium of the Lane 1 product
+
+**Method:** `pipeline/p24_premium_power.py`. Pure burn cost = mean annual payout, % of sum insured; the insurer adds loading.
+- **Cover A:** 2001–2024, the MODIS record, all mandals of the three Kharif districts. Rainfall-only payout (p10) is compared with the dual trigger, which pays only if VCI < 35.
+- **Cover B, YSR:** Sentinel-1 has no record before 2015. So the ERA5 rainfall-side payout (2001–2024) is multiplied by the measured radar confirmation rate: 8 of 27 ERA5 events, 30% (Wilson 95% CI 16–48%). This assumes payout size is independent of confirmation.
+
+| District | Crop | Rainfall only | Dual trigger | Payout years (rain only → dual) |
+|---|---|---|---|---|
+| YSR Kadapa | Cotton / Groundnut / Paddy | 13.5 / 11.8 / 13.8% | 2.5 / 2.4 / 2.3% | about 1 in 5 → 1 in 20–25 |
+| Palnadu | Cotton / Paddy / Chilli | 12.8 / 14.2 / 14.0% | 3.0 / 2.7 / 1.9% | about 1 in 5 → 1 in 20–30 |
+| Parvathipuram Manyam | Paddy | 11.4% | 2.7% | about 1 in 5 → 1 in 25 |
+| YSR Kadapa | Catastrophe cover (B) | 11.9% | 3.5% (1.9–5.8) | – |
+| **YSR, both covers** | | **24.9%** | **5.9% (4.3–8.2)** | |
+
+**Reading:**
+- The dual trigger pays in about one season in twenty-five instead of one in five. Its premium is a fifth of rainfall-only cover.
+- The farmer share and the State's subsidy are both paid on this premium.
+- The other side of the trade-off is the low detection in 7.9: the product pays rarely, and only when two independent indices agree.
+
+### 7.13 Why the ≥75% target can neither be met nor tested with this data
+
+**Method:** `pipeline/p24_premium_power.py`.
+
+1. **Clustering.** One cyclone or flood hits every mandal in the same season, so mandal-crop-years are not independent.
+   - The intra-class correlation of the loss indicator by season is **0.47**, giving a design effect of **11.7** (Kish 1965).
+   - So the 166 mandal-crop-years carry about **14 independent observations** and about **5 independent loss events**.
+2. **Season bootstrap.** Resampling whole seasons (5,000 draws):
+
+| System | Losses caught | 95% CI | Precision | 95% CI |
+|---|---|---|---|---|
+| Season cover, rainfall only | 7% | 0–29% | 17% | 0–29% |
+| Season + ERA5 acute layer | 37% | **0–82%** | 43% | 0–95% |
+| Lane 1 product (dual) | 12% | 0–27% | 78% | 50–86% |
+
+3. **Correlation over seasons.** A true r = 0.75 measured over 7 seasons has a Fisher-z 95% interval of **−0.01 to 0.96**, which cannot be distinguished from zero. About **25 seasons** are needed before a true 0.75 has a lower bound above 0.5.
+4. **Detection.** Estimating a 75% detection rate to ±10 points needs about **73 independent loss events**. YSR supplies under one per season, so pooling CCE across the State's districts is the route.
+
+**Conclusion:**
+- The ≥75% target is not a question this data can answer either way. The ERA5 system's detection interval contains 75%.
+- What the data can show, it shows clearly: rainfall-only cover pays mostly in the wrong seasons, and a second independent index removes most false payouts.
+- The qualification gate (7.9) is built to re-run as each season's CCE arrives, so the evidence accumulates instead of being re-argued.
+
 ## 8. Known limits
 
 1. Real CCE yields exist for YSR Kadapa only (2019–2025); none for Palnadu, Manyam or Chittoor, and no PMFBY claim amounts. Against CCE, weather triggers alone catch at most about a third of loss events (section 7.4). The dual-trigger Lane 1 product is precise (7 of 9 payouts to real losses) but catches only 12% of losses, and its catastrophe index was chosen after seeing 2019–25 data (section 7.9).
@@ -518,6 +570,7 @@ The problem statement asks for *estimated yield loss* within 72 hours. Each deci
 - Funk C. et al. (2015) The CHIRPS dataset. *Scientific Data* 2.
 - Government of India (2016) *Manual for Drought Management*.
 - Government of India, Ministry of Home Affairs (2022) *Items and norms of assistance from SDRF / NDRF, 2022–26* (input subsidy where crop loss is 33% or more).
+- Kish L. (1965) *Survey Sampling*. Wiley (design effect).
 - Huffman G.J. et al. (2023) *NASA GPM IMERG V07 Algorithm Theoretical Basis Document*.
 - Kogan F.N. (1995) Application of vegetation index and brightness temperature for drought detection. *Adv. Space Res.* 15(11).
 - McKee T.B., Doesken N.J., Kleist J. (1993) The relationship of drought frequency and duration to time scales. 8th Conf. Applied Climatology.

@@ -295,6 +295,8 @@ select,input[type=text],input:not([type]){font:inherit;padding:9px 11px;border:1
       </div></div>
     <div class="card mt"><div class="eyebrow">Evidence · real CCE yields, YSR Kadapa 2019–2025</div><h3>Index qualification gate: what is allowed into the contract</h3>
       <p class="cap" id="dualCap"></p><div class="tbl"><table id="dualTbl"></table></div><ul class="tight" id="dualRead"></ul></div>
+    <div class="card mt"><div class="eyebrow">Premium · pure burn cost 2001–2024</div><h3>What the dual trigger costs, against rainfall-only cover</h3>
+      <div class="statrow" id="premTop"></div><div class="tbl"><table id="premTbl"></table></div><div class="note" id="premNote"></div></div>
     <div class="grid g2 mt">
       <div class="card"><div class="eyebrow">Product design</div><h3>WBCIS term-sheet structure</h3>
         <ul class="tight">
@@ -359,7 +361,9 @@ select,input[type=text],input:not([type]){font:inherit;padding:9px 11px;border:1
 
   <!-- VALIDATION -->
   <section id="va">
-    <div class="card"><div class="eyebrow">Ground truth</div><h3>Tested against the Department's real crop-cutting yields</h3>
+    <div class="card"><div class="eyebrow">PoC success criteria</div><h3>Where each target stands, and why</h3><div class="tbl"><table id="critTbl"></table></div></div>
+    <div class="card mt"><div class="eyebrow">Statistical power</div><h3>Can a 75% accuracy target even be measured with this data?</h3><div id="powTop"></div><div class="tbl"><table id="powTbl"></table></div><ul class="tight" id="powRead"></ul></div>
+    <div class="card mt"><div class="eyebrow">Ground truth</div><h3>Tested against the Department's real crop-cutting yields</h3>
       <div id="cceTop"></div><div id="cceChart"></div><div class="tbl mt"><div id="cceTbl"></div></div><div id="cceRead"></div></div>
     <div class="grid g2 mt">
       <div class="card"><div class="eyebrow">Rainfall source</div><h3>Is the sensor the problem? Three products tested</h3><div id="srcTest"></div></div>
@@ -688,6 +692,44 @@ if (FSum) {
     fillV().then(showF).catch(() => { $("#fpTbl").innerHTML = "<tr><td class='note'>Backend not reachable.</td></tr>"; });
   }
 } else { $("#fpCap").textContent = "Run p23_farmer_payouts.py to populate."; }
+
+// premium (p24)
+const PR = D.premium;
+if (PR) {
+  const A = PR.coverA_all, B = PR.coverB, T = PR.ysr_total;
+  $("#premTop").innerHTML = `<div><div class="big" style="color:var(--muted)">${fmt(A.rain_only, 1)}%</div><span>season cover, rainfall only (WBCIS structure), all pilot districts</span></div>
+    <div><div class="big gt">${fmt(A.dual, 1)}%</div><span>same cover, dual trigger (VCI &lt; 35 must agree)</span></div>
+    <div><div class="big gt">${fmt(T.dual, 1)}%</div><span>YSR, both covers dual (range ${fmt(T.dual_range[0], 1)}–${fmt(T.dual_range[1], 1)}%) vs ${fmt(T.rain_only, 1)}% rainfall-only</span></div>`;
+  $("#premTbl").innerHTML = "<tr><th>District</th><th>Crop</th><th class='n'>Rainfall only</th><th class='n'>Dual trigger</th><th class='n'>Payout years, rainfall only</th><th class='n'>Payout years, dual</th><th class='n'>Mandal-years</th></tr>" +
+    PR.coverA.map(r => `<tr><td>${esc(r.district)}</td><td>${esc(r.crop)}</td><td class="n">${fmt(r.rain_only, 1)}%</td><td class="n"><b>${fmt(r.dual, 1)}%</b></td><td class="n">1 in ${fmt(1 / r.freq_rain, 1)}</td><td class="n">1 in ${fmt(1 / r.freq_dual, 0)}</td><td class="n">${fmt(r.mandal_years)}</td></tr>`).join("") +
+    `<tr><td>YSR Kadapa</td><td>Catastrophe cover (B)</td><td class="n">${fmt(B.rain_side, 1)}%</td><td class="n"><b>${fmt(B.dual, 1)}%</b> <span class="note">(${fmt(B.dual_range[0], 1)}–${fmt(B.dual_range[1], 1)})</span></td><td class="n">1 in ${fmt(1 / B.freq_rain, 1)}</td><td class="n">–</td><td class="n">–</td></tr>`;
+  $("#premNote").innerHTML = `Pure burn cost = mean annual payout, % of sum insured, ${esc(PR.years)}; the insurer adds loading. Cover B: Sentinel-1 has no record before 2015, so its ERA5 payout is multiplied by the measured radar confirmation rate (${esc(B.confirm_n)} events, 95% CI ${fmt(100 * B.confirm_ci[0])}–${fmt(100 * B.confirm_ci[1])}%), assuming payout size is independent of confirmation. A cheaper premium matters because the farmer share and the State's subsidy are both paid on it.`;
+}
+
+// success criteria + statistical power (p24)
+const PW = D.power;
+const crit = [
+  ["≥75% correlation, triggers vs actual losses", "Not measurable with the data shared",
+   PW ? `CCE exists for 1 of 4 districts and ${PW.seasons} seasons; no PMFBY claims. Losses cluster by season (ICC ${fmt(PW.icc_year, 2)}), so ${PW.n} mandal-crop-years carry about ${fmt(PW.n_effective)} independent observations. A true r = 0.75 over ${PW.seasons} seasons has a 95% CI of ${fmt(PW.r75_ci_with_seasons[0], 2)} to ${fmt(PW.r75_ci_with_seasons[1], 2)}: indistinguishable from zero.` : "",
+   `PMFBY claims and CCE for all POC districts; about ${PW ? PW.seasons_needed_r : 25} seasons, or districts pooled`],
+  ["≥80% flood-mapping accuracy vs APSDMA", "No reference data shared",
+   "APSDMA maps were requested and not shared. Replaced by a positive control declared in advance (Budameru 2024: PASS) and a measured false-alarm floor per mandal.", "APSDMA flood extents for past events"],
+  ["Loss assessment within 72 hours", "Met for relief (Lane 2)",
+   "Lane 2 runs on daily rainfall and on radar when it arrives (8 of 22 events inside 72 h); every result carries its image time. Insurance settles when the second index is observed.", "Sentinel-1C (6-day revisit with 1A) shortens radar delay"],
+  ["5-year back-test vs PMFBY and CCE", "Done on what exists",
+   "CCE back-test 2019–2025 for YSR Kadapa (7 seasons, 166 mandal-crop-years); 2001–2024 premium back-test for all Kharif pilot districts. No PMFBY claim amounts were shared.", "PMFBY claims; CCE for Palnadu, Manyam, Chittoor"]];
+$("#critTbl").innerHTML = "<tr><th>Target (PPT)</th><th>Status</th><th>Why, in numbers</th><th>What would close it</th></tr>" +
+  crit.map(c => `<tr><td><b>${c[0]}</b></td><td><span class="tag ${c[1].startsWith("Met") || c[1].startsWith("Done") ? "PAY" : "VER"}">${c[1]}</span></td><td style="min-width:320px">${c[2]}</td><td class="note">${c[3]}</td></tr>`).join("");
+if (PW) {
+  const E = PW.bootstrap["Season + ERA5 acute layer"], L = PW.bootstrap["Lane 1 product (dual)"];
+  $("#powTop").innerHTML = `<div class="statrow"><div><div class="big" style="color:var(--muted)">${PW.n}</div><span>mandal-crop-years with CCE</span></div><div><div class="big gt">~${fmt(PW.n_effective)}</div><span>independent observations (design effect ${fmt(PW.design_effect, 1)}, Kish 1965)</span></div><div><div class="big gt">~${fmt(PW.loss_events_effective)}</div><span>independent loss events</span></div><div><div class="big" style="color:var(--ver)">${PW.seasons_needed_r}</div><span>seasons needed to test r = 0.75</span></div></div>`;
+  $("#powTbl").innerHTML = "<tr><th>System</th><th class='n'>Losses caught</th><th class='n'>95% CI (season bootstrap)</th><th class='n'>Precision</th><th class='n'>95% CI</th><th class='n'>Seasons with a payout</th></tr>" +
+    Object.entries(PW.bootstrap).map(([k, b]) => `<tr><td>${esc(k)}</td><td class="n">${fmt(100 * b.pod)}%</td><td class="n">${fmt(100 * b.pod_ci[0])}–${fmt(100 * b.pod_ci[1])}%</td><td class="n">${fmt(100 * b.precision)}%</td><td class="n">${b.precision_ci ? fmt(100 * b.precision_ci[0]) + "–" + fmt(100 * b.precision_ci[1]) + "%" : "–"}</td><td class="n">${b.seasons_with_payout}</td></tr>`).join("");
+  $("#powRead").innerHTML = [
+    `One cyclone or flood hits every mandal in the same season, so mandal-crop-years are not independent. Resampling whole seasons gives the honest uncertainty: the ERA5 system's detection interval runs from ${fmt(100 * E.pod_ci[0])}% to ${fmt(100 * E.pod_ci[1])}% and contains the 75% target. The data can neither confirm nor reject it.`,
+    `Estimating a 75% detection rate to ±10 points needs about ${PW.events_needed_pod} independent loss events; YSR supplies under one per season. Pooling CCE across the State's districts and seasons is the route, and the qualification gate re-runs as each season's CCE arrives.`,
+    `What the data <i>can</i> show, and does: rainfall-only cover pays mostly in the wrong seasons, and requiring a second independent index removes most false payouts (precision ${fmt(100 * L.precision)}%, season-bootstrap CI ${fmt(100 * L.precision_ci[0])}–${fmt(100 * L.precision_ci[1])}%).`].map(t => `<li>${t}</li>`).join("");
+}
 </script>
 </body>
 </html>
