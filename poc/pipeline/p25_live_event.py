@@ -27,7 +27,7 @@ from common import DERIVED, POC, ac
 
 EVENT = dict(id="ARNAB_2026", name="Cyclone Arnab", category="Very severe cyclonic storm (IMD)",
              landfall="Crossed the Andhra Pradesh / Yanam coast near Yanam, early 28 Oct 2026 (IMD: between 02:00 and 08:00 IST)",
-             landfall_ts="2026-10-28 08:00", start="2026-10-27", end="2026-10-29")
+             landfall_ts="2026-10-28 02:00", start="2026-10-27", end="2026-10-29")
 DUR = {"Paddy": 150, "Cotton": 195, "Groundnut": 130, "Red Chillies": 120}
 CROPS = {"22": ["Cotton", "Red Chillies", "Paddy"], "11": ["Paddy", "Cotton", "Groundnut"], "14": ["Paddy"], "10": ["Paddy", "Groundnut"]}
 MODELS = {"ecmwf_ifs025": "ECMWF IFS", "gfs_seamless": "GFS", "icon_seamless": "ICON"}
@@ -195,7 +195,14 @@ keep = ["district", "adm3_name", "pilot", "standing_acres", "era5_3day_mm", "ecm
         "sar_floor_pct", "affected_acres_est", "sat_confirms", "lane1_decision", "lane1_payout_pct", "lane2_action",
         "expected_loss", "basis_risk_flag"]
 show = m[(m.lane2_action != "MONITOR") | m.pilot].sort_values(["district", "rain_side_pct", "index_mm"], ascending=[True, False, False])
-out = dict(event=EVENT, t72=str(T72), generated=datetime.now().strftime("%Y-%m-%d %H:%M"),
+# predictions were committed before the radar result: the commit is the timestamp
+import subprocess  # noqa: E402
+g = subprocess.run(["git", "log", "--reverse", "--format=%h|%ci", "--", "ARNAB_PREREGISTRATION.md"], cwd=POC,
+                   capture_output=True, text=True).stdout.splitlines()
+pre = dict(commit=g[0].split("|")[0], time=g[0].split("|")[1][:16]) if g else None
+if pre:
+    pre["hours_after_landfall"] = round((pd.Timestamp(pre["time"]) - pd.Timestamp(EVENT["landfall_ts"])).total_seconds() / 3600)
+out = dict(event=EVENT, t72=str(T72), generated=datetime.now().strftime("%Y-%m-%d %H:%M"), preregistered=pre,
            era5_published_to=str(era5_last.date()), era5_complete=bool(era5_complete),
            window=[str(W0.date()), str(W1.date())], rows=json.loads(show[keep].to_json(orient="records")),
            counts=dict(mandals=int(len(m)), enumeration=int((m.lane2_action != "MONITOR").sum()),

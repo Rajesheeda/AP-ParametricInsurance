@@ -32,6 +32,7 @@ from common import DERIVED, base_survey, norm_survey  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import quality  # noqa: E402
+from advisory import advice  # noqa: E402
 
 LOG = POC / "data" / "photo_evidence.jsonl"
 VERIFY_WINDOW_DAYS = 30   # policy setting: photos accepted from event start to 30 days after event end
@@ -59,6 +60,15 @@ def layers():
                          columns=["cv", "sv", "sb", "season", "year", "crop_name", "variety", "sowing_date", "area"])
     events = pd.read_csv(DERIVED / "flood_events_gee3.csv", dtype={"district_code": str})
     assess = pd.read_csv(DERIVED / "assessment_pilot.csv", dtype={"district_code": str})
+    # live event (p25): its window and per-mandal lane decisions, same columns as the pilot assessment
+    lf = DERIVED / "live_event_arnab.json"
+    if lf.exists():
+        e = json.loads(lf.read_text(encoding="utf-8"))["event"]
+        events = pd.concat([events, pd.DataFrame([dict(id=e["id"], start=e["start"], end=e["end"], district_code="14")])])
+        lm = pd.read_csv(DERIVED / "live_event_mandals.csv", dtype={"district_code": str})
+        crops = {"14": ["Paddy"], "22": ["Cotton", "Red Chillies", "Paddy"], "11": ["Paddy", "Cotton", "Groundnut"], "10": ["Paddy", "Groundnut"]}
+        lm = lm.assign(event_id=e["id"], mandal=lm.adm3_name, crop=lm.district_code.map(crops)).explode("crop")
+        assess = pd.concat([assess, lm[["event_id", "district_code", "mandal", "crop", "lane1_decision", "lane1_payout_pct", "lane2_action"]]])
     return m, cad, ep, events, assess
 
 
@@ -183,7 +193,10 @@ def verify(image_bytes, claimed_crop=None, claimed_survey=None, lat=None, lon=No
         vision_down = False
     if vis:
         checks.append(dict(check="vision model", ok=True, detail=f"{vis.get('crop_identified')} · {vis.get('damage_class')} · "
-                           f"confidence {vis.get('confidence_score', 0):.2f} · {vis.get('analysis_source')}"))
+                           f"confidence {vis.get('confidence_score', 0):.2f} · photo loss estimate "
+                           f"{vis.get('estimated_photo_loss_pct', '–')}% · {vis.get('analysis_source')}",
+                           note="damage class, confidence and loss % are a general vision model's estimate: no damage-severity "
+                                "labels exist to validate them, so the officer confirms the >= 33% SDRF threshold"))
         target = booked or ([claimed_crop] if claimed_crop else [])
         if target:
             match = any(crop_matches(vis.get("crop_identified"), c) for c in target)
@@ -192,10 +205,12 @@ def verify(image_bytes, claimed_crop=None, claimed_survey=None, lat=None, lon=No
 
     # pest / disease suggestion from the trained classifier (informational; never part of the verdict)
     sug = pest_suggestion(image_bytes) if vis else None
+    adv = None
     if sug:
         checks.append(dict(check="pest/disease (trained model)", ok=None,
                            detail="; ".join(f"{s['label']} {s['prob']:.0%}" for s in sug),
                            note="suggestion for the officer: 60% held-out accuracy on 8 post-flood paddy/cotton classes"))
+        adv = advice(sug[0]["label"])
 
     # verdict
     hard = [c for c in checks if c["check"] in ("location", "survey number", "timing", "crop match", "e-Panta booking") and c["ok"] is False]
@@ -218,10 +233,10 @@ def verify(image_bytes, claimed_crop=None, claimed_survey=None, lat=None, lon=No
     resolution = None
     if case:
         rows = [c for c in case if not expect or c["crop"] == expect] or case
-        paid = any(c.get("lane1_decision") == "INDEX PAYOUT" for c in rows)
+        paid = any(str(c.get("lane1_decision")).startswith("INDEX PAYOUT") for c in rows)
         ins = ("Insurance (Lane 1) is decided by the index only and is unchanged: "
-               + ("index payout " + ", ".join(f"{c['crop']} {c['lane1_payout_pct']:.0f}%" for c in rows if c.get("lane1_decision") == "INDEX PAYOUT")
-                  if paid else "no index payout") + ".")
+               + ("index payout " + ", ".join(f"{c['crop']} {c['lane1_payout_pct']:.0f}%" for c in rows if str(c.get("lane1_decision")).startswith("INDEX PAYOUT"))
+                  if paid else "no index payout" + (" yet (awaiting radar)" if any(c.get("lane1_decision") == "AWAITING RADAR" for c in rows) else "")) + ".")
         if verdict.startswith("RETAKE"):
             resolution = "Photo rejected before any check: farmer asked to retake it in the app. " + ins
         elif verdict.startswith("INVALID"):
@@ -237,7 +252,7 @@ def verify(image_bytes, claimed_crop=None, claimed_survey=None, lat=None, lon=No
     rec = dict(time=datetime.now().isoformat(timespec="seconds"), event_id=event_id, lat=lat, lon=lon, gps_source=src,
                taken=taken.isoformat() if taken else None, context=ctx, checks=checks, verdict=verdict,
                estimated_photo_loss_pct=vis.get("estimated_photo_loss_pct") if vis else None,
-               disease=vis.get("disease_details") if vis else None, case=case, resolution=resolution)
+               disease=vis.get("disease_details") if vis else None, advisory=adv, case=case, resolution=resolution)
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a", encoding="utf-8") as f:
         f.write(json.dumps(rec, default=str, ensure_ascii=False) + "\n")

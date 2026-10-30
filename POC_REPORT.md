@@ -46,8 +46,9 @@
 | **Lane 1 product vs real CCE** (YSR, both covers dual-triggered) | **9 payouts, 7 to real losses** (78%, 95% CI 45–94%), against a 36% base rate; catches 12% of losses |
 | Same years, rainfall-only season cover (today's WBCIS structure) | 24 payouts, **20 with no real loss** (precision 17%) |
 | Rainfall source test: CHIRPS / ERA5 / GPM IMERG / 2-of-3 consensus (acute layer) | losses caught 10% / 37% / 47% / 37%; none catches the Nov 2021 floods (section 7.8) |
-| Per-farmer cover, 4 pilot mandals, Kharif 2023–25 | **221,555** e-Panta bookings priced on their own sowing week; **21,289** would flip between paid and not paid under a mandal calendar (section 7.10) |
+| Per-farmer cover, 6 pilot mandals, Kharif 2023–25 | **522,208** e-Panta bookings priced on their own sowing week; **109,039** would flip between paid and not paid under a mandal calendar (21,289 of 221,555 in YSR and Palnadu; section 7.10) |
 | **Premium, pure burn cost 2001–2024** (section 7.12) | Season cover **13.2% → 2.5%** of sum insured with the dual trigger; YSR both covers **5.9%** (4.3–8.2%) vs 24.9% rainfall-only |
+| **Live event: Cyclone Arnab** (landfall 28 Oct 2026; section 7.14) | Frozen contract run on the storm. Predictions committed to git at **T+69 h**, before the radar result. **16** mandals opened for relief enumeration; **6** Manyam mandals above the rainfall trigger (provisional); Sentinel-1 at **T+52 h** shows no flood on standing crops above the floor, so **0** index payouts where rainfall-only cover would pay 6 |
 | Photo quality gate (thresholds from 982 Department photos) | **91%** of held-out genuine photos accepted, **100%** of blurred / dark / overexposed / low-resolution copies refused |
 | False-positive reduction from the standing-crop gate (Michaung 2023, YSR, parcel level) | **60%** of radar-flagged parcels removed (harvested or not yet sown) |
 
@@ -467,13 +468,14 @@ The problem statement asks for *estimated yield loss* within 72 hours. Each deci
 ### 7.10 Each farmer's own sowing calendar
 
 **Method:** `pipeline/p23_farmer_payouts.py`.
-- Every e-Panta booking of the focus crops in Chapad and Khajipet (YSR) and Gurazala and Sattenapalle (Palnadu), Kharif 2023–25, gets its FAO-56 stages from its own sowing week.
+- Every e-Panta booking of the focus crops in Chapad and Khajipet (YSR), Gurazala and Sattenapalle (Palnadu) and Parvathipuram and Balijipeta (Manyam, paddy), Kharif 2023–25, gets its FAO-56 stages from its own sowing week. Kharif 2026 bookings carry the live-event status (section 7.14).
 - Bookings are grouped into cohorts (mandal × crop × sowing week). Each cohort's 1-in-5 trigger and 1-in-25 exit come from 1995–2024 CHIRPS over that cohort's own stage windows, so early and late sowers have the same payout frequency by design.
 - The result is compared with the mandal-median calendar a WBCIS term sheet would use. 90 bookings sown outside 1 May – 28 Sep are outside the Kharif window.
 
 **Results:**
-- **221,555 bookings** were priced.
-- **21,289** cross the rainfall trigger under one calendar but not the other. For example:
+- **522,208 bookings** were priced (221,555 in YSR and Palnadu, 300,653 in Manyam).
+- **109,039** cross the rainfall trigger under one calendar but not the other (21,289 in YSR and Palnadu). For example:
+  - Balijipeta 2023 paddy: 27,401 bookings trigger on their own calendar, none on the mandal calendar. VCI was 100 (the greenest season on record), so the dual trigger pays none of them.
   - Chapad 2023 paddy: 2,838 bookings trigger on their own calendar, none on the mandal calendar.
   - Gurazala 2023 cotton: 2,798 would be paid on the mandal calendar only.
 - With the satellite trigger applied, **Gurazala 2023 pays 13,096 bookings** (cotton, chilli, paddy; VCI 30), about 39% of sum insured acre-weighted.
@@ -532,6 +534,45 @@ The problem statement asks for *estimated yield loss* within 72 hours. Each deci
 - The ≥75% target is not a question this data can answer either way. The ERA5 system's detection interval contains 75%.
 - What the data can show, it shows clearly: rainfall-only cover pays mostly in the wrong seasons, and a second independent index removes most false payouts.
 - The qualification gate (7.9) is built to re-run as each season's CCE arrives, so the evidence accumulates instead of being re-argued.
+
+### 7.14 Live event: Cyclone Arnab, October 2026
+
+**Event.** Very severe cyclonic storm (IMD). It crossed the Andhra Pradesh / Yanam coast near Yanam early on 28 Oct 2026, then moved north-west towards south Odisha. Hours below are counted from 02:00 IST on 28 Oct, the earliest landfall time IMD gives, so every "T+" is an upper bound.
+
+**What was run.** `pipeline/p25_live_event.py`, with the contract, levels and radar method exactly as frozen before the storm. Predictions were written to `poc/ARNAB_PREREGISTRATION.md` and committed to git (`d77c146`, 30 Oct 23:15 IST, T+69 h) **before** the radar result was computed. The commit is the timestamp.
+
+**Rainfall.**
+- ERA5, the contract index, is published about 5–6 days late; it reached only 24 Oct when this was run.
+- So the rainfall side is **provisional**: ECMWF IFS 0.25°, the operational model ERA5 is built from, read against the ERA5 1-in-5 / 1-in-25 levels. GFS and ICON give the spread.
+- Six Manyam mandals cross the 1-in-5 level: Balijipeta and Parvathipuram (both pilot), Salur, Makkuva, Palakonda and Pachipenta. Their rainfall sides are 5.6–15.4% of sum insured.
+- The three models disagree widely: 126–262 mm over 3 days at Balijipeta.
+
+**Radar (Lane 1 second trigger, Lane 2 priority).**
+- Sentinel-1, relative orbit 121, 30 Oct 00:13 UTC (T+52 h). Orbit-matched with 5 pre-event images.
+- Otsu water threshold −21.3 dB from 551 known-water samples, within the usual −21 to −24 dB.
+- Flooded cropland is 0–0.9% in 14 of 15 Manyam mandals, each below its own dry-date floor. Palakonda shows 2.8%, below its 6.7% floor.
+- **No mandal is confirmed, so there are no index payouts.**
+- Palnadu had no post-event pass by the time of the run.
+
+**Relief (Lane 2).**
+- 16 mandals (13 Manyam, 3 Palnadu; about 1.2 lakh standing acres in e-Panta 2026) were opened for photo / AEO enumeration inside 72 hours.
+- Telugu and English alerts were issued, with the insurance status stated separately.
+- The expected loss attached (median 25%, IQR 0–39%) is calibrated on YSR CCE, not on Manyam.
+
+**Comparison with first official figures.** These are preliminary press figures, 28 Oct (Deccan Chronicle), not a score:
+- Crop damage of 2.24 lakh ha in 14 districts, heaviest in the Godavari delta, mostly submerged paddy: West Godavari 76,176 ha, Konaseema 44,232, Kakinada 42,222, East Godavari 29,866, Krishna 22,339.
+- Parvathipuram Manyam is not among the districts named.
+- The absence of flooded cropland in our Manyam radar map is consistent with this.
+- The delta lies outside the POC districts. Its next Sentinel-1 pass is 4 Nov (orbit 19, 12-day revisit).
+
+**How it will be scored.** Against the Department's / APSDMA's mandal-level SDRF enumeration for Arnab, if shared, using the rule in the pre-registration file:
+- the share of damaged mandals that our relief list named;
+- the share of our index payouts that went to damaged mandals.
+
+**What Arnab shows.**
+1. **The dual trigger held.** Rainfall-only cover would have paid 6 mandals on a storm whose crop damage was reported elsewhere.
+2. **Relief did not wait for insurance.**
+3. **The flood index cannot see wind-lodged paddy.** If enumeration finds lodging losses in Manyam, they are paid by relief and logged as basis risk. A lodging index can enter the contract only through the qualification gate, between seasons.
 
 ## 8. Known limits
 

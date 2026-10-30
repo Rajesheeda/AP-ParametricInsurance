@@ -16,7 +16,8 @@ STEPS = [
     "p18_loss_calibration.py",   # CCE-calibrated yield loss per trigger type
     "p22_dual_trigger.py",       # Lane 1 catastrophe cover: rainfall consensus x Sentinel-1, tested on CCE
     "p13_assessment.py",         # pilot decisions, two lanes
-    "p23_farmer_payouts.py",     # Lane 1 per-farmer payouts on own sowing dates (YSR pilot)
+    "p25_live_event.py",         # live event (Cyclone Arnab) with the frozen contract; radar via --radar <ee-project>
+    "p23_farmer_payouts.py",     # Lane 1 per-farmer payouts on own sowing dates (YSR, Palnadu, Manyam pilots)
     "p24_premium_power.py",      # Lane 1 premium; how much evidence the CCE data can carry
     "p19_alerts.py",             # Telugu / English alerts
     "p14_dashboard_data.py",     # dashboard

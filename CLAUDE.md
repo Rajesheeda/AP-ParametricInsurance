@@ -5,7 +5,7 @@
 
 ## Where we are
 - **Stage:** POC. hierachAi was given a chance to prove the solution after the demo did not fully convince the judges.
-- **Window:** POC build 2026-09-25 to about 2026-10-10. **Demo: 30 October 2026.**
+- **Window:** POC build 2026-09-25 to about 2026-10-10. **Demo: 3 November 2026, early morning.**
 - **Judges:** Murthy (remote-sensing and agri-science expert, hostile, works bottom-up) and Kalyan / Mohiuddin (Crop Insurance Section).
 - **Scope:**
   - Kharif: Palnadu (22), YSR Kadapa (11), Parvathipuram Manyam (14).
@@ -62,8 +62,9 @@
 | GPM IMERG | `gee_py/imerg.py <project>` | Daily mandal means Jun 2000 – Sep 2026 (113 mandals); catalogue `p05 rain_imerg_daily.parquet`. CCE: catches 47% of losses but 67% false alarms; nobody catches Nov 2021 (report 7.8). |
 | SAR for CCE years | `gee_py/sar_cce.py <project>` | Frozen flood method on 17 YSR acute windows 2019–25 × 40 mandals → `gee_out/out_sarcce_*.parquet`. |
 | Dual trigger / gate | `pipeline/p22_dual_trigger.py` | Candidate indices vs CCE with Wilson CI and gate; writes `cat_cover_levels.parquet`, `dual_trigger_validation.json` (report 7.9). |
-| Per-farmer payouts | `pipeline/p23_farmer_payouts.py` | 221,555 e-Panta bookings (Chapad, Khajipet, Gurazala, Sattenapalle; K2023–25) on own sowing-week cohorts; 21,289 flip vs the mandal calendar; Gurazala 2023 pays 13,096. API `GET /api/v1/poc/farmer/{villages,payouts}` (`routers/poc_farmer.py`). |
+| Per-farmer payouts | `pipeline/p23_farmer_payouts.py` | e-Panta bookings (Chapad, Khajipet, Gurazala, Sattenapalle, Parvathipuram, Balijipeta; K2023–25, plus K2026 live-event status in `coverB_status`; 221,555 before Manyam was added) on own sowing-week cohorts; 109,039 of 522,208 (K2023–25) flip vs the mandal calendar (21,289 of 221,555 before Manyam); Gurazala 2023 pays 13,096. API `GET /api/v1/poc/farmer/{villages,payouts}` (`routers/poc_farmer.py`). |
 | Premium & evidence power | `pipeline/p24_premium_power.py` | Burn cost 2001–24: season cover 13.2% → 2.5% dual; YSR both covers 5.9% (4.3–8.2) vs 24.9%. ICC(year) 0.47, design effect 11.7 → 166 mandal-crop-years ≈ 14 independent obs; ERA5 POD season-bootstrap CI 0–82%; r=0.75 over 7 seasons CI −0.01–0.96, needs ~25 seasons (report 7.12–7.13). Q&A: `MURTHY_QA.md`. |
+| Live event | `pipeline/p25_live_event.py [--radar <ee-project>]` | Cyclone Arnab (landfall near Yanam, 28 Oct 2026) on the frozen contract. Predictions pre-registered in `poc/ARNAB_PREREGISTRATION.md` (commit d77c146, T+69 h, before radar). Rain: ERA5 (lags ~6 days) else ECMWF IFS provisional, GFS/ICON spread (Open-Meteo). 16 mandals relief enumeration; 6 Manyam above rain trigger; S1 orbit 121 30 Oct (T+52 h) no flood above floor → 0 index payouts. Delta next S1 pass 4 Nov. Dashboard tab "Live: Cyclone Arnab"; report 7.14. |
 | **CCE validation** | `pipeline/p15_validate_cce.py` | Real Department CCE yields (4 CSVs in `C:\AP-Agri-Common\data`, Oct 2026), YSR Kadapa, 166 mandal-crop-years 2019–2025. Loss = yield < 70/80/90% of the mandal's leave-one-out normal. Season trigger catches 7% of losses; + acute layer on ERA5 37% (agreement 60%); CHIRPS misses Nivar 2020; both miss Nov 2021 floods. Below the 75% target; reported as basis risk. |
 | Fused loss model | `pipeline/p16_loss_model.py` | Tested leave-one-year-out vs CCE: AUC 0.53/0.50, i.e. no skill, so it is **not used** (report 7.7). |
 | Soil moisture | `gee_py/soil_moisture.py`, `pipeline/p17_soil_moisture.py` | ERA5-Land root zone (2000–25) + SMAP surface (2016–25), mid-stage percentile. In YSR, dry soil does NOT mean loss (irrigation); drought trigger + dry soil precision 0–11% vs 36% base. Evidence only. |

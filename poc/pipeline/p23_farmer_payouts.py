@@ -1,5 +1,8 @@
-"""Lane 1 per-farmer payouts, Kharif 2023-2025: YSR pilot mandals (Chapad, Khajipet; e-Panta joined to cadastral)
-and Palnadu pilot mandals (Gurazala, Sattenapalle; e-Panta survey numbers, no cadastral).
+"""Lane 1 per-farmer payouts, Kharif 2023-2025 (+ Kharif 2026 live events): YSR pilot mandals (Chapad, Khajipet; e-Panta
+joined to cadastral), Palnadu (Gurazala, Sattenapalle) and Parvathipuram Manyam (Parvathipuram, Balijipeta) pilot
+mandals (e-Panta survey numbers, no cadastral).
+Kharif 2026 is open: Cover A settles at season end (blank), Cover B comes from the live event run (p25, Cyclone Arnab);
+until ERA5 and Sentinel-1 have both confirmed, the booking carries the provisional rainfall-side % and status only.
 
 Every e-Panta booking (survey number x crop) gets its own cover, built from ITS OWN sowing date:
   Cover A (season, WBCIS structure, p10): FAO-56 phases start at the booking's sowing week, not at a mandal-wide
@@ -28,8 +31,9 @@ from common import DERIVED, POC, ac
 
 DUR = {"Paddy": 150, "Cotton": 195, "Groundnut": 130, "Red Chillies": 120}
 PILOT = {"CHAPAD": "Chapad", "KHAJIPET": "Khajipet"}
-CROPS = {"11": ["Paddy", "Cotton", "Groundnut"], "22": ["Cotton", "Red Chillies", "Paddy"]}
+CROPS = {"11": ["Paddy", "Cotton", "Groundnut"], "22": ["Cotton", "Red Chillies", "Paddy"], "14": ["Paddy"]}
 YEARS = [2023, 2024, 2025]
+LIVE = 2026
 
 pil = pd.read_csv(DERIVED / "pilot_mandals.csv", dtype={"district_code": str})
 mid = pil.set_index("adm3_name").adm3_id.to_dict()
@@ -37,10 +41,11 @@ b = pd.read_parquet(DERIVED / "ysr_epanta_parcel_join.parquet")
 b = b[b.mandal_en.isin(PILOT) & b.year.isin(YEARS) & b.crop_name.isin(CROPS["11"])].copy()
 b["mandal"] = b.mandal_en.map(PILOT)
 b["district_code"] = "11"
-pal = pil[pil.district_code == "22"].set_index("mandal_te").adm3_name.to_dict()
-e22 = pd.read_parquet(ac.extract_path("parametric", "epanta_crop_parcel_22.parquet"),
-                      columns=["mandal", "village", "village_en", "season", "year", "survey", "crop_name", "variety", "sowing_date", "area"])
-e22 = e22[e22.mandal.isin(pal) & (e22.season == "Kharif") & e22.year.isin(YEARS) & e22.crop_name.isin(CROPS["22"])].copy()
+pal = pil[pil.district_code.isin(["22", "14"])].set_index("mandal_te").adm3_name.to_dict()
+e22 = pd.concat([pd.read_parquet(ac.extract_path("parametric", f"epanta_crop_parcel_{c}.parquet"),
+                                 columns=["mandal", "village", "village_en", "season", "year", "survey", "crop_name", "variety", "sowing_date", "area"])
+                 .assign(district_code=c).pipe(lambda d: d[d.crop_name.isin(CROPS[c])]) for c in ("22", "14")])
+e22 = e22[e22.mandal.isin(pal) & (e22.season == "Kharif") & e22.year.isin(YEARS + [LIVE])].copy()
 # Telugu-only village names: romanised (Harvard-Kyoto, as p02 does for mandal names) for display; Telugu kept alongside
 from indic_transliteration import sanscript  # noqa: E402
 
@@ -55,9 +60,9 @@ def roman(te):
     return " ".join(w.capitalize() for w in x.split())
 
 
-e22["village_en"] = e22.village_en.fillna(e22.village.map(lambda v: f"{roman(v)} ({v})"))
+e22["village_en"] = e22.village_en.fillna(e22.village.map({v: f"{roman(v)} ({v})" for v in e22.village.dropna().unique()}))
 e22["mandal"] = e22.mandal.map(pal)
-e22["district_code"], e22["join_level"], e22["sv"], e22["objectid"] = "22", "no cadastral", None, None
+e22["join_level"], e22["sv"], e22["objectid"] = "no cadastral", None, None
 b = pd.concat([b, e22[[c for c in b.columns if c in e22.columns]]], ignore_index=True)
 b["adm3_id"] = b.mandal.map(mid)
 b["sow"] = pd.to_datetime(b.sowing_date, errors="coerce")
@@ -69,7 +74,7 @@ print("bookings:", len(b), "| outside sowing window:", int((~b.covered).sum()))
 
 # ---- Cover A: cohort-specific season cover
 rain = pd.read_parquet(DERIVED / "rain_chirps_daily.parquet")
-coh = b[b.covered].groupby(["district_code", "adm3_id", "crop_name", "week"]).size().reset_index(name="n")
+coh = b[b.covered & (b.year < LIVE)].groupby(["district_code", "adm3_id", "crop_name", "week"]).size().reset_index(name="n")
 ix = []
 for r in coh.itertuples():
     sow = pd.DataFrame([dict(district_code=r.district_code, adm3_id=r.adm3_id, season="Kharif", crop_name=r.crop_name, off=r.week)])
@@ -127,15 +132,28 @@ for e in ev[ev.coverB_pct > 0].itertuples():
                (b.sow + pd.to_timedelta(b.crop_name.map(DUR), unit="D") >= e.start)
     upd = standing & (b.coverB_pct < e.coverB_pct)
     b.loc[upd, "coverB_pct"], b.loc[upd, "coverB_event"] = e.coverB_pct, e.event
-# Palnadu: Cover B from the pilot assessment's Lane 1 decisions (same contract, p13), standing crop only
+# Palnadu and Manyam: Cover B from the pilot assessment's Lane 1 decisions (same contract, p13), standing crop only
 asm = pd.read_csv(DERIVED / "assessment_pilot.csv", dtype={"district_code": str})
-asm = asm[(asm.kind == "acute") & (asm.district_code == "22") & (asm.lane1_payout_pct > 0)]
+asm = asm[(asm.kind == "acute") & asm.district_code.isin(["22", "14"]) & (asm.lane1_payout_pct > 0)]
 for e in asm.itertuples():
     st = pd.Timestamp(e.start)
     sy = st.year - 1 if st.month == 1 else st.year
     standing = (b.mandal == e.mandal) & (b.crop_name == e.crop) & (b.year == sy) & b.covered & (b.sow <= st) &                (b.sow + pd.to_timedelta(b.crop_name.map(DUR), unit="D") >= st)
     upd = standing & (b.coverB_pct < e.lane1_payout_pct)
     b.loc[upd, "coverB_pct"], b.loc[upd, "coverB_event"] = e.lane1_payout_pct, e.event_id
+# Kharif 2026 live event (p25): paid only once the index is confirmed; until then the provisional % and status
+b["coverB_status"] = None
+lf = DERIVED / "live_event_arnab.json"
+if lf.exists():
+    lev = json.loads(lf.read_text(encoding="utf-8"))["event"]
+    lm = pd.read_csv(DERIVED / "live_event_mandals.csv")
+    st0 = pd.Timestamp(lev["start"])
+    for e in lm[lm.adm3_id.isin(b.adm3_id.unique()) & (lm.rain_side_pct > 0)].itertuples():
+        standing = (b.adm3_id == e.adm3_id) & (b.year == LIVE) & b.covered & (b.sow <= st0) &                    (b.sow + pd.to_timedelta(b.crop_name.map(DUR), unit="D") >= st0)
+        b.loc[standing, "coverB_event"] = lev["id"]
+        b.loc[standing, "coverB_status"] = f"{e.lane1_decision}; rainfall side {e.rain_side_pct:.1f}% ({e.index_source})"
+        if str(e.lane1_decision).startswith("INDEX PAYOUT"):
+            b.loc[standing, "coverB_pct"] = e.lane1_payout_pct
 b.loc[~b.covered, ["coverA_pct", "coverB_pct"]] = 0.0
 vci = pd.read_csv(DERIVED / "validation_trigger_vs_vci.csv")[["adm3_id", "year", "vci"]].drop_duplicates(["adm3_id", "year"])
 b = b.merge(vci, on=["adm3_id", "year"], how="left")
@@ -143,7 +161,8 @@ b["coverA_paid"] = b.coverA_pct.fillna(0).where(b.vci < 35, 0.0)
 b["total_pct"] = (b.coverA_paid + b.coverB_pct).clip(upper=100)
 b["calendar_pct"] = b.calendar_pct.where(b.covered, 0.0)
 cols = ["mandal", "village_en", "survey", "sv", "join_level", "objectid", "year", "crop_name", "variety", "sowing_date", "area",
-        "covered", "week", "coverA_pct", "coverA_driver", "calendar_pct", "vci", "coverA_paid", "coverB_pct", "coverB_event", "total_pct"]
+        "covered", "week", "coverA_pct", "coverA_driver", "calendar_pct", "vci", "coverA_paid", "coverB_pct", "coverB_event",
+        "coverB_status", "total_pct"]
 b[cols].to_parquet(DERIVED / "farmer_payouts.parquet", index=False)
 
 # summary: what farmer-specific timing changes vs a mandal-wide calendar

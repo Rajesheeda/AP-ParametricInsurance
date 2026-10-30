@@ -4,7 +4,35 @@ Each answer gives a short reply, the number behind it, and the dashboard screen 
 Sources: `POC_REPORT.md` sections in brackets. **Rule: say the limit before he does.**
 
 ## Opening (30 seconds)
-"We split the problem in two. **Insurance** pays on a pre-agreed index, by formula, with no claim and no visit. **Relief** assesses real damage in 72 hours. We tested every index against the Department's own crop-cutting yields. We published what failed. Only indices that beat chance are allowed into the contract."
+"We split the problem in two. **Insurance** pays on a pre-agreed index, by formula, with no claim and no visit. **Relief** assesses real damage in 72 hours. We tested every index against the Department's own crop-cutting yields. We published what failed. Only indices that beat chance are allowed into the contract. And this week we ran it, unchanged, on Cyclone Arnab."
+
+---
+
+## Cyclone Arnab (open the Live tab first)
+**30-second version:**
+- Arnab crossed the coast near Yanam early on 28 October. Our code was not touched.
+- By T+69 hours we had opened 16 mandals for relief enumeration and issued Telugu and English alerts.
+- We committed our predictions to git *before* computing the radar.
+- On rainfall alone, 6 Manyam mandals would have paid 6–15%.
+- Sentinel-1 at T+52 hours found no flood on standing crops above each mandal's false-alarm floor, so the insurance lane held: no payout.
+- The first official figures put the damage in the Godavari delta (submerged paddy), not in Manyam. That's consistent with the radar, but not yet a score.
+
+**"So farmers in Manyam who lost crops get nothing?"**
+- They get relief enumeration, opened in 16 mandals within 72 h.
+- Insurance pays only what two indices agree on. If enumeration finds wind-lodged paddy that a flood index can't see, it's a basis-risk case and goes into the log.
+- A lodging index would have to pass the gate between seasons. We don't change the contract mid-event.
+
+**"Radar 52 hours later: the water had drained."**
+- Possible on sloping Manyam fields. That's why radar is the *second* trigger and never the only evidence of loss.
+- The delta, where the damage was reported, is next imaged on 4 November (12-day revisit). That's the revisit limit we state for every event.
+
+**"ECMWF is not ERA5."**
+- Correct. ERA5 is published about 5–6 days late, so the rainfall side is labelled *provisional*. Settlement waits for ERA5.
+- We used ECMWF IFS because ERA5 is built from it, and we show GFS and ICON as the spread: 126–262 mm at Balijipeta. That spread is the reason we don't settle on a forecast model.
+
+**"How will you know you were right?"**
+- The scoring rule is in the committed file (`poc/ARNAB_PREREGISTRATION.md`), written before the outcome: share of damaged mandals our relief list named, and share of our payouts that went to damaged mandals.
+- The outcome is the Department's mandal-level SDRF enumeration. That's one ask, and they produce it anyway.
 
 ---
 
@@ -59,7 +87,7 @@ Yes. WBCIS (since 2007) and Restructured WBCIS under PMFBY: weather-index cover 
 **9. "Then why build another one?"**
 Because on the State's own yields, the WBCIS-style rainfall-only cover pays mostly in the wrong seasons. We fix three things:
 1. **Dual trigger.** Rainfall-only paid in 24 mandal-crop-years, 20 of them with no real loss. Our product paid in 9, 7 of them real (78%). [7.9]
-2. **Each farmer's own sowing date** instead of one calendar per reference area. 21,289 of 221,555 bookings flip between paid and not paid depending on the calendar. [7.10]
+2. **Each farmer's own sowing date** instead of one calendar per reference area. 109,039 of 522,208 bookings in the 6 pilot mandals flip between paid and not paid depending on the calendar. [7.10]
 3. **A qualification gate** with published failures. Our own pre-declared consensus design failed, and we report it. [7.9]
 
 Bonus: the premium falls from 13.2% to 2.5% of sum insured for the season cover. [7.12]
@@ -151,6 +179,10 @@ The notified DLTC scale of finance; it is an input on the Farmer payouts screen,
 - Catastrophe cover: when the radar image arrives (6–12 days).
 - Season cover: at season end.
 - Relief enumeration starts within 72 h.
+
+**"What does the Department get from this tomorrow?"** (Arnab)
+- A ranked list of 16 mandals for enumeration with standing acres from e-Panta, plus alerts, inside 72 hours.
+- An insurance decision that nobody can argue about, because the rule and the prediction were committed before the data.
 
 **"What if the farmer lost a crop and the index didn't pay?"**
 - They get Lane 2 relief enumeration (SDRF, 33% damage or more) and PMFBY area-yield where applicable.

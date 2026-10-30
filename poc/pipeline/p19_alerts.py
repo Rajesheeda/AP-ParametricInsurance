@@ -62,6 +62,36 @@ for (eid, kind, mandal, action), g in a[a.action != "NO PAYOUT"].groupby(["event
         audience = "farmers (advisory)"
     rows.append(dict(event_id=eid, kind=kind, start=g.start.iloc[0], district_code=g.district_code.iloc[0], mandal=mandal,
                      action=action, crops=crops_en, audience=audience, english=en, telugu=te))
+# live event (p25): relief enumeration alerts for every mandal on the list, with the insurance index status beside it
+lf = DERIVED / "live_event_mandals.csv"
+if lf.exists():
+    import json
+    E = json.loads((DERIVED / "live_event_arnab.json").read_text(encoding="utf-8"))["event"]
+    te_all = dict(zip(*pd.read_csv(DERIVED / "poc_mandal_centroids.csv")[["adm3_id", "mandal_te"]].values.T))
+    crops_of = {"14": ["Paddy"], "22": ["Cotton", "Red Chillies", "Paddy"], "11": ["Paddy", "Cotton", "Groundnut"], "10": ["Paddy", "Groundnut"]}
+    lm = pd.read_csv(lf, dtype={"district_code": str})
+    for r in lm[lm.lane2_action != "MONITOR"].itertuples():
+        crops = crops_of[r.district_code]
+        crops_en, crops_te = ", ".join(crops), ", ".join(CROP_TE.get(c, c) for c in crops)
+        m_te = te_all.get(r.adm3_id, r.adm3_name)
+        if str(r.lane1_decision).startswith("INDEX PAYOUT"):
+            ins_en = f" Insurance: index triggered, {r.lane1_payout_pct:.0f}% of sum insured (final when ERA5 rainfall is published)."
+            ins_te = f" బీమా: సూచిక ప్రేరేపించబడింది, బీమా మొత్తంలో {r.lane1_payout_pct:.0f}% (ERA5 వర్షపాత సమాచారం వచ్చాక తుది నిర్ణయం)."
+        elif r.lane1_decision == "AWAITING RADAR":
+            ins_en, ins_te = " Insurance: index decision waits for the next satellite radar pass.", " బీమా: సూచిక నిర్ణయం తదుపరి ఉపగ్రహ రాడార్ చిత్రం కోసం వేచి ఉంది."
+        else:
+            ins_en = " Insurance: index not triggered so far (radar showed no flood water on crops). Relief enumeration is separate and open."
+            ins_te = " బీమా: సూచిక ఇప్పటివరకు ప్రేరేపించబడలేదు (రాడార్‌లో పంటలపై ముంపు నీరు కనిపించలేదు). విపత్తు సహాయ నష్ట గణన వేరుగా కొనసాగుతుంది."
+        en = (f"{r.adm3_name} mandal: {E['name']} brought heavy rain ({r.index_mm:.0f} mm in 3 days, provisional). Disaster relief "
+              f"(input subsidy) damage enumeration is open for {crops_en}. Upload a photo of your field with location switched on, "
+              f"or meet the agriculture officer at the field visit. Drain standing water; watch paddy for bacterial leaf blight, "
+              f"sheath blight and brown plant hopper, and ask the AEO before spraying.{ins_en}")
+        te = (f"{m_te} మండలం: {E['name'].replace('Cyclone', '').strip()} తుఫాను వల్ల భారీ వర్షం ({r.index_mm:.0f} మి.మీ., 3 రోజుల్లో, తాత్కాలిక అంచనా). "
+              f"{crops_te} పంటకు విపత్తు సహాయం (ఇన్‌పుట్ సబ్సిడీ) నష్ట గణన ప్రారంభమైంది. ఫోన్‌లో లొకేషన్ ఆన్ చేసి మీ పొలం ఫోటో పంపండి, "
+              f"లేదా వ్యవసాయ అధికారి క్షేత్ర పరిశీలనకు హాజరవ్వండి. పొలంలో నిలిచిన నీటిని తీసివేయండి; వరిలో బాక్టీరియా ఆకు ఎండు తెగులు, "
+              f"పొడ తెగులు, సుడి దోమ కోసం గమనించండి, పిచికారీకి ముందు వ్యవసాయ అధికారిని సంప్రదించండి.{ins_te}")
+        rows.append(dict(event_id=E["id"], kind="acute", start=E["start"], district_code=r.district_code, mandal=r.adm3_name,
+                         action="RELIEF ENUMERATION", crops=crops_en, audience="farmers + AEO", english=en, telugu=te))
 out = pd.DataFrame(rows).sort_values("start", ascending=False)
 out.to_csv(DERIVED / "alerts.csv", index=False, encoding="utf-8-sig")
 print(len(out), "alerts;", out.action.value_counts().to_dict())

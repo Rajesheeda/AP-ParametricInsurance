@@ -120,6 +120,7 @@ data = dict(
     dual=_json("dual_trigger_validation.json"),
     premium=_json("premium_lane1.json"),
     power=_json("evidence_power.json"),
+    live=_json("live_event_arnab.json"),
     farmer_summary=_json("farmer_payouts_summary.json"),
     farmers=farmers,
     cat_events=pd.read_csv(cat_f).replace({np.nan: None}).to_dict("records") if cat_f.exists() else [],

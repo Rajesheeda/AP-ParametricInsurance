@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException
 router = APIRouter(prefix="/poc/farmer", tags=["poc-farmer"])
 SRC = Path(__file__).resolve().parents[2] / "poc" / "data" / "derived" / "farmer_payouts.parquet"
 COLS = ["mandal", "village_en", "survey", "crop_name", "sowing_date", "area", "year", "covered", "coverA_pct", "calendar_pct",
-        "vci", "coverA_paid", "coverB_pct", "coverB_event", "total_pct"]
+        "vci", "coverA_paid", "coverB_pct", "coverB_event", "coverB_status", "total_pct"]
 
 
 def ok(data):
