@@ -58,3 +58,15 @@ lowering it, so a drop-only rule can miss them.
 - For every hour of each period, time to the next usable acquisition; **P(image within 72 h)** per mandal and period:
   2021 (S1A + S1B), 2022-2024 (S1A only, after S1B failed Dec 2021), 2025-2026 (current constellation).
 - Pure metadata; no threshold is involved.
+
+## Amendment 1 (2026-11-14, before any accuracy was scored)
+The coverage check (`sar_depth.py coverage`) found that `ee_run.flood_event` scores a whole district with the first
+matched pass, and mandals outside that pass's footprint read 0 ha flooded instead of "not imaged" (Palnadu: 26 of 28
+mandals in 5 of 7 events; YSR CCE windows: 19 of 40 mandals in 11 of 17). Changes, made before the `score` step ran:
+- **A/B domain** additionally requires a valid Sentinel-1 post-image pixel (the radar footprint). Two events had been
+  sampled; their samples are discarded and redrawn.
+- **Correction to the operational method (bug fix, not tuning):** each mandal is scored by the earliest orbit-matched
+  pass in the 12-day window whose footprint covers at least half of its cropland (majority rule); the flood share is
+  taken over imaged cropland only; a mandal with no such pass is NOT IMAGED, never "no flood". Detection physics,
+  thresholds and masks are unchanged. Every downstream result (positive control, dry-date floors, CCE dual trigger,
+  farmer payouts, Cyclone Arnab) is recomputed and reported both as originally run and as corrected.
