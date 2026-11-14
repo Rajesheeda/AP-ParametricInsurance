@@ -48,3 +48,12 @@ the state's report to the Inter-Ministerial Central Team.
 3. **How much:** our net flooded cropland per old district next to the reported damage / inundation, as a ratio.
    No pass/fail: radar sees standing water on one date, the state counts damage of any kind (wind lodging included).
 4. **When:** share of affected districts with a usable radar image within 72 h of landfall.
+
+## Amendment 1 (2026-11-14, after seeing ERA5 rain, before fetching wind)
+ERA5 rain put Arnab's heaviest rain in Vizianagaram / Visakhapatnam / Srikakulam (median 3-day ~200 mm), while the
+state's worst damage was in the Godavari delta (ERA5 80-96 mm). Late October is mature-paddy season, so wind lodging
+is the likely driver. **Exploratory, not part of the frozen contract:** ERA5 daily maximum 10 m wind and gust
+(Open-Meteo, same source as the index) per mandal, classed by IMD's cyclone definition (sustained >= 34 kt =
+63 km/h) and gale gusts; reported per old district next to the damage figures. It can inform next season's contract
+only through the index qualification gate on CCE; ERA5's ~31 km grid is known to under-state tropical-cyclone peak
+winds, so it is read as a pattern, not as station wind.
