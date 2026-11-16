@@ -15,7 +15,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 
-PROJECT, CMD = sys.argv[1], sys.argv[2]
+PROJECT, CMD, ONLY = sys.argv[1], sys.argv[2], sys.argv[3:]   # optional: event ids for sample
 sys.argv = ["ee_run", PROJECT, "none"]
 import ee  # noqa: E402
 import ee_run as R  # noqa: E402
@@ -156,7 +156,7 @@ def _save_meta(rows):
 
 def cmd_sample():
     rows = []
-    for e in events():
+    for e in [e for e in events() if not ONLY or e["eid"] in ONLY]:
         try:
             _sample_one(e, rows)
         except ee.EEException as err:
