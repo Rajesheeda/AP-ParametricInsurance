@@ -2,7 +2,7 @@
 28 Oct 2026, then moved north-west towards south Odisha). Everything here uses the contract and methods as frozen
 before the storm (p13 two-lane rules, p22 term-sheet levels, ee_run.flood_event radar method); nothing is tuned to it.
 
-Usage: py -3.13 p25_live_event.py [--radar <ee-project>]
+Usage: py -3.13 p25_live_event.py [--event ARNAB|MURASU] [--radar <ee-project>]
   1. Rain at every POC mandal centroid, 22 Oct to yesterday (Open-Meteo, Asia/Kolkata days):
        ERA5        - the contract's index (p22 qualification gate); published about 5-6 days late.
        ECMWF IFS   - operational 0.25 deg model of the same family ERA5 is built from; GFS and ICON as the spread.
@@ -25,9 +25,18 @@ import requests
 
 from common import DERIVED, POC, ac
 
-EVENT = dict(id="ARNAB_2026", name="Cyclone Arnab", category="Very severe cyclonic storm (IMD)",
-             landfall="Crossed the Andhra Pradesh / Yanam coast near Yanam, early 28 Oct 2026 (IMD: between 02:00 and 08:00 IST)",
-             landfall_ts="2026-10-28 02:00", start="2026-10-27", end="2026-10-29")
+EVENTS = {
+    "ARNAB": dict(id="ARNAB_2026", name="Cyclone Arnab", category="Very severe cyclonic storm (IMD)",
+                  landfall="Crossed the Andhra Pradesh / Yanam coast near Yanam, early 28 Oct 2026 (IMD: between 02:00 and 08:00 IST)",
+                  landfall_ts="2026-10-28 02:00", start="2026-10-27", end="2026-10-29"),
+    # run after the event with the same frozen rules; not pre-registered (see CYCLONE_TEST_2026.md)
+    "MURASU": dict(id="MURASU_2026", name="Cyclone Murasu", category="Severe cyclonic storm (IMD)",
+                   landfall="Crossed the coast near Ongole (Prakasam), early 3 Nov 2026 (APSDMA: about 01:00 IST)",
+                   landfall_ts="2026-11-03 01:00", start="2026-11-02", end="2026-11-04"),
+}
+EV_KEY = sys.argv[sys.argv.index("--event") + 1].upper() if "--event" in sys.argv else "ARNAB"
+EVENT = EVENTS[EV_KEY]
+SUFFIX = "" if EV_KEY == "ARNAB" else f"_{EV_KEY.lower()}"
 DUR = {"Paddy": 150, "Cotton": 195, "Groundnut": 130, "Red Chillies": 120}
 CROPS = {"22": ["Cotton", "Red Chillies", "Paddy"], "11": ["Paddy", "Cotton", "Groundnut"], "14": ["Paddy"], "10": ["Paddy", "Groundnut"]}
 MODELS = {"ecmwf_ifs025": "ECMWF IFS", "gfs_seamless": "GFS", "icon_seamless": "ICON"}
@@ -67,7 +76,7 @@ def fetch(url, extra):
 rain = pd.concat([fetch("https://archive-api.open-meteo.com/v1/archive", dict(models="era5")),
                   fetch("https://api.open-meteo.com/v1/forecast", dict(models=",".join(MODELS)))])
 rain["rain_mm"] = pd.to_numeric(rain.rain_mm)
-rain.to_parquet(DERIVED / "live_event_rain.parquet", index=False)
+rain.to_parquet(DERIVED / f"live_event_rain{SUFFIX}.parquet", index=False)
 era5_last = rain[(rain.src == "era5") & rain.rain_mm.notna()].date.max()
 era5_complete = era5_last >= W1
 print(f"ERA5 published to {era5_last.date()}; window {W0.date()}..{W1.date()} -> {'complete' if era5_complete else 'PROVISIONAL'}")
@@ -126,18 +135,21 @@ if "--radar" in sys.argv:
     sys.path.insert(0, str(POC / "gee_py"))
     import ee  # noqa: E402
     import ee_run as R  # noqa: E402
+    import flood_passes as FP  # noqa: E402  corrected per-mandal pass selection (SAR_DEPTH_STUDY.md amendment 1)
     g = gpd.read_file(DERIVED / "poc_mandals.geojson")
     g = g[g.ok].drop_duplicates("adm3_id")
     g["geometry"] = g.geometry.simplify(0.002)
     for code in sorted(m[(m.rain_side_pct > 0) | m.weather_trigger].district_code.unique()):
         gg = g[g.district_code == code]
         fc = ee.FeatureCollection([ee.Feature(ee.Geometry(json.loads(gpd.GeoSeries([x]).to_json())["features"][0]["geometry"], geodesic=False),
-                                              {"mid": i, "dist": code}) for i, x in zip(gg.adm3_id, gg.geometry)])
-        table, _ = R.flood_event(fc, EVENT["start"], EVENT["end"], f"{EVENT['id']}_{code}")
+                                              {"mid": i}) for i, x in zip(gg.adm3_id, gg.geometry)])
         try:
-            df = ee.data.computeFeatures({"expression": table, "fileFormat": "PANDAS_DATAFRAME"})
-            df.drop(columns=["geo"], errors="ignore").to_parquet(OUT / f"out_live_{EVENT['id']}_{code}.parquet", index=False)
-            print("radar mapped", code, df.post_image_time.iloc[0], flush=True)
+            df = FP.by_mandal(fc, EVENT["start"], EVENT["end"], "mid")
+            if df is None:
+                print("radar: no matched pass yet for district", code, flush=True)
+                continue
+            df.assign(dist=code, event_id=f"{EVENT['id']}_{code}").to_parquet(OUT / f"out_live_{EVENT['id']}_{code}.parquet", index=False)
+            print("radar mapped", code, int(df.imaged.sum()), "of", len(df), "mandals, first", df.post_image_time.min(), flush=True)
         except ee.EEException as e:
             print("radar not available yet for district", code, "-", str(e)[:100], flush=True)
 
@@ -187,7 +199,7 @@ m["basis_risk_flag"] = np.where(m.lane1_decision.str.startswith("NO PAYOUT") & m
 m["pilot"] = m.adm3_id.isin(pil.adm3_id)
 DN = {"10": "Chittoor", "11": "YSR Kadapa", "14": "Parvathipuram Manyam", "22": "Palnadu"}
 m["district"] = m.district_code.map(DN)
-m.drop(columns=["mandal_te"]).to_csv(DERIVED / "live_event_mandals.csv", index=False)
+m.drop(columns=["mandal_te"]).to_csv(DERIVED / f"live_event_mandals{SUFFIX}.csv", index=False)
 
 keep = ["district", "adm3_name", "pilot", "standing_acres", "era5_3day_mm", "ecmwf_ifs025_3day_mm", "gfs_seamless_3day_mm",
         "icon_seamless_3day_mm", "models_min", "models_max", "L5", "L25", "p99_3day", "index_mm", "rain_side_pct", "models_above_L5",
@@ -199,7 +211,7 @@ show = m[(m.lane2_action != "MONITOR") | m.pilot].sort_values(["district", "rain
 import subprocess  # noqa: E402
 g = subprocess.run(["git", "log", "--reverse", "--format=%h|%ci", "--", "ARNAB_PREREGISTRATION.md"], cwd=POC,
                    capture_output=True, text=True).stdout.splitlines()
-pre = dict(commit=g[0].split("|")[0], time=g[0].split("|")[1][:16]) if g else None
+pre = dict(commit=g[0].split("|")[0], time=g[0].split("|")[1][:16]) if g and EV_KEY == "ARNAB" else None
 if pre:
     pre["hours_after_landfall"] = round((pd.Timestamp(pre["time"]) - pd.Timestamp(EVENT["landfall_ts"])).total_seconds() / 3600)
 out = dict(event=EVENT, t72=str(T72), generated=datetime.now().strftime("%Y-%m-%d %H:%M"), preregistered=pre,
@@ -211,7 +223,7 @@ out = dict(event=EVENT, t72=str(T72), generated=datetime.now().strftime("%Y-%m-%
                        index_payout=int(m.lane1_decision.str.startswith("INDEX PAYOUT").sum()),
                        standing_acres_enumeration=float(m.loc[m.lane2_action != "MONITOR", "standing_acres"].sum())),
            calibration=cal)
-(DERIVED / "live_event_arnab.json").write_text(json.dumps(out, indent=1, default=str), encoding="utf-8")
+(DERIVED / f"live_event_{EV_KEY.lower()}.json").write_text(json.dumps(out, indent=1, default=str), encoding="utf-8")
 pd.set_option("display.width", 250)
 print(show[["district", "adm3_name", "pilot", "standing_acres", "era5_3day_mm", "ecmwf_ifs025_3day_mm", "models_min", "models_max",
             "L5", "p99_3day", "rain_side_pct", "flood_share_pct", "sar_floor_pct", "hours_after_landfall", "lane1_decision",

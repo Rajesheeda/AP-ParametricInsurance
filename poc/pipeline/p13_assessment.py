@@ -138,6 +138,7 @@ for r in ev.itertuples():
                              affected_acres_est=round(standing_ac * max(0.0, flood_share - NOISE.get(p.adm3_id, 0.0)), 1),
                              rain_3day_mm=r3mm, return_period_yr=rp, rain_source=rsrc, cyclone=cyc,
                              paddy_planting_window=planting, orbit_matched=bool(f.orbit_matched), sat_signal=sat_signal,
+                             radar_imaged=bool(f.get("imaged", True)),
                              weather_trigger=weather, satellite_confirms=sat, action=action))
 
 # Season (drought) assessment, pilot mandals x crops x 2020-2025
