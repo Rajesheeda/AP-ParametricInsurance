@@ -229,3 +229,10 @@ The notified DLTC scale of finance; it is an input on the Farmer payouts screen,
 - Partly. On 218 Department photos of diseased crop it called 90% damaged (CI 85–93%). Its false alarms on healthy crop and its loss % are not measured, because no healthy or severity-labelled images exist in the Department's Label Studio.
 - So it is evidence for the officer, and the officer confirms the 33% line.
 
+## Coast-wide cyclone test (added 16 Nov)
+**"Did your radar find the delta damage for Arnab?"**
+- No. The declared test failed: our top three were Guntur, Srikakulam, West Godavari, against the official East Godavari, West Godavari, Krishna.
+- Why: the delta's first usable pass (4 Nov) came after Murasu's rain, so the storms can't be separated. November is Rabi land preparation, and our false-alarm floors come from Feb/Mar dates, the wrong season.
+- Fix for next season, through the gate: a seasonal floor (same weeks, non-event years). The same caveat applies to Salur's 0.6% signal.
+- Murasu's "where" passed, but Prakasam reads about 73,000 ha against 3,151 ha reported, so we don't count it as skill.
+

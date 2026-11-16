@@ -30,7 +30,8 @@
 **Two things we say plainly.** (a) The Arnab change is a bug fix made after the pre-registration, dated and committed before any scoring. (b) A 0.6% radar signal unlocking a 34.5% payout is a design weakness: radar confirms, rainfall sets the amount. A minimum-signal rule is a candidate for next season and can enter only through the qualification gate.
 **Revisit (acquisition metadata, 2021–2026).** Sentinel-1 repeats every 12 days over the pilot mandals for the whole record: P(image within 72 h) = 24% (single-track mandals) to 49% (two tracks).
 **Flooded vegetation (declared test).** VV rise ≥ 3 dB: Budameru 5.4% of cropland vs 3.5% on a dry control date, ratio 1.55 < 2: no usable signal at C-band; the drop-only rule stays.
-**Not yet scored:** flood-map accuracy against Sentinel-2 (only 2 events have a clear optical view so far) and the coast-wide Arnab / Murasu district ranking (`poc/CYCLONE_TEST_2026.md`).
+**Coast-wide cyclone test (declared rules, `poc/CYCLONE_TEST_2026.md`).** Arnab "where": **FAILED**. Our top three old districts by net flooded cropland were Guntur, Srikakulam and West Godavari, against the official East Godavari, West Godavari and Krishna; the delta's first usable pass (4 Nov) came after Murasu's 3 Nov rain, so the two storms cannot be separated there. Murasu "where": passed (Prakasam and Guntur above Nellore), but Prakasam reads about 73,000 ha against 3,151 ha reported with little rain. November is Rabi land preparation and the dry-date floors are from Feb/Mar, the wrong season, so this pass is not evidence of skill. A seasonal floor (same weeks, non-event years) is the candidate fix through the gate; the same caveat applies to Salur.
+**Not yet scored:** flood-map accuracy against Sentinel-2 (only 2 events have a clear optical view so far).
 Tables in sections 7.4–7.13 marked *as originally run* keep the first-run values for the record; the corrected values are the ones above.
 
 ---
