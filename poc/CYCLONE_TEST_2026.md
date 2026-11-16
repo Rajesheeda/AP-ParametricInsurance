@@ -57,3 +57,14 @@ is the likely driver. **Exploratory, not part of the frozen contract:** ERA5 dai
 63 km/h) and gale gusts; reported per old district next to the damage figures. It can inform next season's contract
 only through the index qualification gate on CCE; ERA5's ~31 km grid is known to under-state tropical-cyclone peak
 winds, so it is read as a pattern, not as station wind.
+
+## Amendment 2 (2026-11-16, after the declared scores, before this check is computed)
+Declared scores: Arnab "where" FAILED (our top three by net flooded cropland: Guntur, Srikakulam, West Godavari;
+the delta's first usable pass was 4 Nov, after Murasu's 3 Nov rain, so in the delta the two storms cannot be
+separated). Murasu "where" PASSED (Prakasam and Guntur each above Nellore), but Prakasam reads ~73,000 ha of net
+flooded cropland against 3,151 ha reported, with little Murasu rain (median 15-20 mm/day). November is Rabi paddy
+land preparation, and the dry-date floors come from February / March, the wrong season.
+**Exploratory seasonal check:** the same per-mandal method for Prakasam and Nellore on the window 1-3 Nov 2024
+(no cyclone; same weeks of the year). If the 2024 flooded share is similar to Murasu's, the Murasu signal there is
+mostly land preparation and the PASS is not evidence of skill. A seasonal floor (same weeks, non-event years) is
+the candidate fix for next season, through the qualification gate.
