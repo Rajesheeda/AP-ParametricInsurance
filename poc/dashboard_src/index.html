@@ -820,7 +820,7 @@ const crit = [
   ["≥80% flood-mapping accuracy vs APSDMA", "No reference data shared",
    "APSDMA maps were requested and not shared. Replaced by a positive control declared in advance (Budameru 2024: PASS) and a measured false-alarm floor per mandal.", "APSDMA flood extents for past events"],
   ["Loss assessment within 72 hours", "Met for relief (Lane 2)",
-   "Lane 2 runs on daily rainfall and on radar when it arrives (8 of 22 events inside 72 h); every result carries its image time. Insurance settles when the second index is observed.", "Sentinel-1C (6-day revisit with 1A) shortens radar delay"],
+   "Lane 2 runs on daily rainfall inside 72 h and adds radar when it arrives; every result carries its image time. Sentinel-1 repeats every 12 days over the pilot mandals, so P(radar image within 72 h) is 24% (one track) to 49% (two tracks), unchanged 2021–2026 (acquisition metadata). Insurance settles when the second index is observed.", "A second radar source over AP (e.g. ISRO EOS-04) or tasked commercial SAR"],
   ["5-year back-test vs PMFBY and CCE", "Done on what exists",
    "CCE back-test 2019–2025 for YSR Kadapa (7 seasons, 166 mandal-crop-years); 2001–2024 premium back-test for all Kharif pilot districts. No PMFBY claim amounts were shared.", "PMFBY claims; CCE for Palnadu, Manyam, Chittoor"]];
 $("#critTbl").innerHTML = "<tr><th>Target (PPT)</th><th>Status</th><th>Why, in numbers</th><th>What would close it</th></tr>" +
@@ -840,23 +840,29 @@ if (PW) {
 const LV = D.live;
 if (LV) {
   const E = LV.event, R = LV.rows, C = LV.counts, P = LV.preregistered;
-  const radarRow = R.find(r => r.radar_mapped), H = radarRow ? radarRow.hours_after_landfall : null;
+  const imaged = R.filter(r => r.radar_mapped && r.lane2_action !== "MONITOR");
+  const passes = [...new Set(imaged.map(r => r.post_image_time))].sort();
+  const radarRow = R.filter(r => r.radar_mapped).sort((a, b) => a.hours_after_landfall - b.hours_after_landfall)[0], H = radarRow ? radarRow.hours_after_landfall : null;
+  const Hmax = imaged.length ? Math.max(...imaged.map(r => r.hours_after_landfall)) : null;
+  const in72 = imaged.filter(r => r.hours_after_landfall <= 72).length;
+  const paid = R.filter(r => String(r.lane1_decision).startsWith("INDEX PAYOUT"));
+  const passTxt = passes.map(t => `${t.slice(5, 10)} (T+${fmt(Math.min(...imaged.filter(r => r.post_image_time === t).map(r => r.hours_after_landfall)))} h, ${imaged.filter(r => r.post_image_time === t).length} mandals)`).join(", then ");
   const rainOnly = R.filter(r => r.rain_side_pct > 0);
   const FIN = !!LV.era5_complete, RSRC = FIN ? "ERA5" : "ECMWF IFS";
   const spread = Math.max(...R.filter(r => r.models_max).map(r => r.models_max - r.models_min));
   const noPass = R.filter(r => !r.radar_mapped && r.lane2_action !== "MONITOR");
-  $("#lvGen").textContent = `Run ${LV.generated} IST · same code as the back-tests`;
+  $("#lvGen").textContent = `Run ${LV.generated} IST · same code as the back-tests · radar pass per mandal (bug fix, 14 Nov)`;
   $("#lvTitle").textContent = `${E.name}: what the system did, hour by hour`;
   $("#lvCap").innerHTML = `${esc(E.category)}. ${esc(E.landfall)}. The same code that produced the back-tests was run on the storm as it happened; nothing was tuned to it. Figures update as each satellite pass and ERA5 day arrives.`;
   $("#lvKpi").innerHTML = `<div><div class="big gt">${fmt(C.enumeration)}</div><span>mandals opened for relief enumeration (${fmt(C.standing_acres_enumeration)} standing acres, e-Panta 2026)</span></div>
     <div><div class="big" style="color:var(--ver)">${fmt(C.rain_side)}</div><span>mandals above the rainfall trigger (${FIN ? "ERA5, final" : "provisional"}): rainfall-only cover would pay these</span></div>
-    <div><div class="big" style="color:var(--ink)">${fmt(C.index_payout)}</div><span>index payouts: ${radarRow ? `radar at T+${fmt(H)} h shows no flood on standing crops above the false-alarm floor` : "radar pending"}</span></div>
+    <div><div class="big" style="color:var(--ink)">${fmt(C.index_payout)}</div><span>index payout${C.index_payout === 1 ? "" : "s"}: ${paid.length ? paid.map(r => `${esc(r.adm3_name)} ${fmt(r.lane1_payout_pct, 1)}% of sum insured (radar ${fmt(r.flood_share_pct, 2)}% vs floor ${fmt(r.sar_floor_pct, 2)}%)`).join("; ") + `; ${fmt(rainOnly.length - paid.length)} held, radar does not confirm` : radarRow ? "radar shows no flood on standing crops above the false-alarm floor" : "radar pending"}</span></div>
     <div><div class="big" style="color:var(--pay)">${P ? "T+" + fmt(P.hours_after_landfall) + " h" : "–"}</div><span>relief list and alerts issued (target: 72 h)</span></div>`;
   const st = (cls, when, what, txt) => `<div class="st ${cls}"><span class="tag ${cls === "done" ? "PAY" : "PEND"}">${esc(when)}</span><b>${what}</b>${txt}</div>`;
   $("#lvTl").innerHTML = [
     st("done", "28 Oct, early", "Landfall", "Near Yanam; IMD very severe cyclonic storm"),
     st("done", "29–30 Oct", "Rain index (provisional)", `ECMWF IFS, GFS, ICON per mandal vs each mandal's own 1-in-5 level, read while ERA5 was not yet published`),
-    st(radarRow ? "done" : "wait", radarRow ? radarRow.post_image_time.slice(5) + " UTC" : "pending", "Sentinel-1 radar", radarRow ? `acquired T+${fmt(H)} h; orbit-matched; flood on cropland below the floor everywhere` : "next pass"),
+    st(radarRow ? "done" : "wait", radarRow ? "T+" + fmt(H) + (Hmax > H ? "–" + fmt(Hmax) : "") + " h" : "pending", "Sentinel-1 radar", radarRow ? `orbit-matched pass per mandal: ${passTxt}; ${fmt(in72)} of ${fmt(imaged.length)} relief mandals imaged inside 72 h` : "next pass"),
     st("done", P ? "T+" + fmt(P.hours_after_landfall) + " h" : "within 72 h", "Relief list + alerts", `first list issued; ${fmt(C.enumeration)} mandals as of this run (the list grows as rainfall updates). Telugu / English alerts, photo check open`),
     st(LV.era5_complete ? "done" : "wait", LV.era5_complete ? "published" : "about 4 Nov", "ERA5 (contract index)", FIN ? `published to ${esc(LV.era5_published_to)}; ${fmt(C.rain_side)} mandals above their 1-in-5 level; settled on ERA5 × radar` : `published to ${esc(LV.era5_published_to)}; Lane 1 settles on ERA5 × radar`),
     st("wait", "after enumeration", "Score the prediction", "Department SDRF crop-damage enumeration by mandal; any miss enters the basis-risk log")].join("");
@@ -870,13 +876,14 @@ if (LV) {
       <td>${l2tag(r.lane2_action)}</td><td class="n note" title="${esc(r.expected_loss || "")}">${r.expected_loss ? "~" + fmt(LV.calibration.median) + "%" : "–"}</td></tr>`).join("");
   $("#lvTblNote").innerHTML = `Standing acres = e-Panta Kharif 2026 bookings of the district's focus crops sown before the storm and still within their FAO-56 duration. Expected loss = median real CCE loss when an acute trigger fired (YSR Kadapa, n=${LV.calibration.n}, IQR ${fmt(LV.calibration.q25)}–${fmt(LV.calibration.q75)}%); it is not calibrated on Manyam. Per-farmer status for the pilot mandals: Farmer payouts → Parvathipuram / Balijipeta → 2026.`;
   $("#lvRead").innerHTML = [
-    `<b>The dual trigger held.</b> On rainfall alone, ${fmt(rainOnly.length)} Manyam mandals would pay ${fmt(Math.min(...rainOnly.map(r => r.rain_side_pct)), 0)}–${fmt(Math.max(...rainOnly.map(r => r.rain_side_pct)), 0)}% of sum insured. The radar index ${radarRow ? `(T+${fmt(H)} h) found no flood on standing crops above the measured floor` : "is pending"}, so the insurance lane holds. That is the behaviour that cut false season payouts from 20 to 0 on CCE.`,
+    `<b>The dual trigger did its job.</b> On rainfall alone, ${fmt(rainOnly.length)} Manyam mandals would pay ${fmt(Math.min(...rainOnly.map(r => r.rain_side_pct)), 0)}–${fmt(Math.max(...rainOnly.map(r => r.rain_side_pct)), 0)}% of sum insured. Radar confirmed ${paid.length ? fmt(paid.length) + " (" + paid.map(r => esc(r.adm3_name)).join(", ") + ")" : "none"} and held ${fmt(rainOnly.length - paid.length)}.${paid.length ? ` <b>Weakness we state ourselves:</b> ${paid.map(r => `${esc(r.adm3_name)}'s ${fmt(r.flood_share_pct, 2)}% flooded cropland (floor ${fmt(r.sar_floor_pct, 2)}%) unlocked ${fmt(r.lane1_payout_pct, 1)}%`).join("; ")}, because radar only confirms and rain sets the amount. A minimum-signal rule goes to next season's qualification gate; the contract is not changed mid-event.` : ""}`,
     `<b>Relief did not wait for insurance.</b> All ${fmt(C.enumeration)} mandals with a heavy-rain signal were opened for photo / AEO enumeration inside 72 hours, with alerts in Telugu and English. Photos are checked for quality, geotag and crop before an officer sees them.`,
     `<b>Consistent with the official figures, not yet scored.</b> The Chief Minister's statement (as reported by Deccan Chronicle) puts crops on 3,33,268 ha in 16 districts, the heaviest in the Godavari delta, mostly submerged paddy: West Godavari 76,752 ha, Kakinada 52,253, East Godavari 49,959, Konaseema 46,845, Krishna 44,836. Parvathipuram Manyam is not among the named districts. Our prediction is scored only when the Department's mandal-level enumeration is available.`,
     `<b>The basis-risk log has its next test.</b> If enumeration finds wind-lodged paddy in Manyam that the flood index cannot see, those farmers are covered by relief, and the case is logged. A lodging index can enter the contract only by passing the qualification gate between seasons, never mid-event.`].map(t => `<li>${t}</li>`).join("");
   $("#lvLim").innerHTML = [
     FIN ? `ERA5 arrived about 6 days after the storm, so Lane 1 could only settle then; during the event the three forecast models disagreed by up to ${fmt(spread)} mm in one mandal, which is why settlement never runs on a forecast. ERA5 at a mandal centroid (0.25°) also smooths convective peaks.` : `ERA5, the contract index, is published only to ${esc(LV.era5_published_to)}. The rainfall side is provisional and the three operational models disagree by up to ${fmt(spread)} mm in one mandal.`,
-    `Radar sees standing water, not wind lodging. By T+${fmt(H || 0)} h water may already have drained from sloping Manyam fields.`,
+    `Radar sees standing water, not wind lodging. Most relief mandals were first imaged at T+${fmt(Hmax || 0)} h (12-day repeat over Manyam): water may already have drained from sloping fields. Only ${fmt(in72)} of ${fmt(imaged.length)} were imaged inside 72 h.`,
+    `Bug fixed 14 Nov, before scoring: each district used to be scored with its first pass, so mandals outside that pass read 0% flood instead of "not imaged". Each mandal now uses the earliest orbit-matched pass covering half its cropland; old and corrected results are both kept.`,
     `The Godavari delta, where the reported damage is, lies outside the POC districts. It was next imaged by Sentinel-1 on 4 Nov, about 7 days after landfall (12-day revisit on that orbit): the revisit limit we state for every event.`,
     noPass.length ? `${fmt(noPass.length)} of the mandals opened for relief had no usable post-event radar pass in this run (${esc([...new Set(noPass.map(r => r.district.replace("Parvathipuram ", "")))].join(", "))}): relief there rests on rainfall and photos.` : `Every mandal opened for relief had a usable post-event radar pass.`,
     `Manyam has no cadastral polygons, so assessment is at mandal and village level, and expected loss is calibrated on YSR.`].map(t => `<li>${t}</li>`).join("");

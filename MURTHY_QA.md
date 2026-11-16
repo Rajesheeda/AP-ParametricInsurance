@@ -11,22 +11,35 @@ Sources: `POC_REPORT.md` sections in brackets. **Rule: say the limit before he d
 ## Cyclone Arnab (open the Live tab first)
 **30-second version:**
 - Arnab crossed the coast near Yanam early on 28 October. Our code was not touched.
-- By T+69 hours we had opened 16 mandals for relief enumeration and issued Telugu and English alerts. The 31 Oct update of the provisional rain added 4 Palnadu mandals just above their 99th percentile (Sattenapalle 81.6 vs 80.9 mm): 20 now. Insurance is still 0.
-- On rainfall alone, 6 Manyam mandals would have paid 6–15%.
-- Sentinel-1 at T+52 hours found no flood on standing crops above each mandal's false-alarm floor, so the insurance lane held: no payout.
+- By T+69 hours we had opened 16 mandals for relief enumeration and issued Telugu and English alerts. On final ERA5 (published to 10 Nov) it is 15, all in Manyam.
+- On ERA5 rainfall alone, 6 Manyam mandals would pay 22–80% of sum insured.
+- Radar confirmed one: **Salur, 34.5%**. The other 5 are held.
+- Radar timing: 5 of the 15 relief mandals were imaged at T+52 h (30 Oct); the other 10 were first imaged on 4 Nov (T+172 h).
+- **Bug fix, 14 Nov, before scoring.** Each district had been scored with its first pass, so mandals outside it read "0% flood" instead of "not imaged". Each mandal now uses the earliest orbit-matched pass covering half its cropland. Salur was not imaged on 30 Oct; on 4 Nov it shows 0.60% flooded vs a 0.07% floor. The first run said 0 payouts; the corrected run says 1. Both are kept.
 - The first official figures put the damage in the Godavari delta (submerged paddy), not in Manyam. That's consistent with the radar, but not yet a score.
 
 **"So farmers in Manyam who lost crops get nothing?"**
-- They get relief enumeration, opened in 16 mandals within 72 h, 20 after the 31 Oct rain update.
+- They get relief enumeration: 16 mandals within 72 h, 15 on final ERA5.
 - Insurance pays only what two indices agree on. If enumeration finds wind-lodged paddy that a flood index can't see, it's a basis-risk case and goes into the log.
 - A lodging index would have to pass the gate between seasons. We don't change the contract mid-event.
 
-**"Radar 52 hours later: the water had drained."**
-- Possible on sloping Manyam fields. That's why radar is the *second* trigger and never the only evidence of loss.
-- The delta, where the damage was reported, is next imaged on 4 November (12-day revisit). That's the revisit limit we state for every event.
+**"Salur: a 0.6% radar signal unlocks a 34.5% payout?"**
+- Yes, and we state it on the screen as a design weakness: radar only confirms, rainfall sets the amount.
+- A minimum-signal rule is a candidate for next season, entering only through the qualification gate. We don't change the contract mid-event.
+
+**"Radar 172 hours later: the water had drained."**
+- Possible on sloping Manyam fields. That's why radar is the *second* trigger and never the only evidence of loss; relief runs on rainfall and photos inside 72 h.
+- Sentinel-1 repeats every 12 days over the pilot mandals: P(image within 72 h) is 24% (one track) to 49% (two tracks), unchanged 2021–2026 (acquisition metadata). The delta was imaged on 4 Nov, about 7 days after landfall.
+
+**"Flooded paddy raises backscatter (double bounce). Your drop-only rule misses it."**
+- We tested it with a rule declared first: a VV rise of 3 dB or more covers 5.4% of cropland after Budameru, but 3.5% on a dry February date. Ratio 1.55, below the declared 2×: no usable signal at C-band here, so the drop-only rule stays.
+
+**"Cyclone Murasu?"**
+- 3 Nov, near Ongole. 20 Palnadu mandals opened for relief (Sattenapalle and Gurazala included); 0 index payouts, all below the 1-in-5 level (Amaravathi 189.0 vs 189.1 mm).
+- First radar 9 Nov (T+149 h). Chilakaluripet 22.4% flooded vs a 2.0% floor, but rainfall below the contract level: relief pays, insurance doesn't, and it is logged as basis risk. Not pre-registered; run on the frozen rules.
 
 **"ECMWF is not ERA5."**
-- Correct. ERA5 is published about 5–6 days late, so the rainfall side is labelled *provisional*. Settlement waits for ERA5.
+- Correct. ERA5 is published about 5–6 days late, so during the event the rainfall side was labelled *provisional*. Settlement waited for ERA5 (now final).
 - We used ECMWF IFS because ERA5 is built from it, and we show GFS and ICON as the spread: 126–262 mm at Balijipeta. That spread is the reason we don't settle on a forecast model.
 
 **"How will you know you were right?"**
@@ -85,7 +98,7 @@ Yes. WBCIS (since 2007) and Restructured WBCIS under PMFBY: weather-index cover 
 
 **9. "Then why build another one?"**
 Because on the State's own yields, the WBCIS-style rainfall-only cover pays mostly in the wrong seasons. We fix three things:
-1. **Dual trigger.** Rainfall-only paid in 24 mandal-crop-years, 20 of them with no real loss. Our product paid in 9, 7 of them real (78%). [7.9]
+1. **Dual trigger.** Rainfall-only paid in 24 mandal-crop-years, 20 of them with no real loss. Our product paid in 17, 14 of them real (82%, CI 59–94%; after the 14 Nov radar fix, 9 / 7 before). [7.9]
 2. **Each farmer's own sowing date** instead of one calendar per reference area. 109,039 of 522,208 bookings in the 6 pilot mandals flip between paid and not paid depending on the calendar. [7.10]
 3. **A qualification gate** with published failures. Our own pre-declared consensus design failed, and we report it. [7.9]
 
@@ -121,15 +134,15 @@ The data shared can't measure a 75% target either way:
 
 What the data *can* show, it does: rainfall-only cover pays wrongly, and a second index fixes most of that. [7.13] *Screen:* Validation → Statistical power.
 
-**"Your insurance lane catches only 12% of losses."**
+**"Your insurance lane catches only 24% of losses."**
 By design it pays only what two independent indices agree on.
 - The 2021 harvest-time floods and the 2022 losses had no rainfall signal in any product, and radar saw them only partly.
 - No index can see those. They belong to relief and PMFBY area-yield, and we log them as basis risk instead of hiding them.
 
 **"You picked ERA5 after seeing the data."**
 Yes, and we say so on the screen.
-- Our declared consensus design failed (17 payouts, 2 real).
-- ERA5's hits are mostly cyclone Nivar 2020, so it is on probation until the Kharif 2026 CCE tests it out of sample.
+- Our declared consensus design failed (17 payouts, 3 real after the radar fix; 2 before).
+- After the radar fix the Lane 1 product pays 17 times, 14 real (82%, CI 59–94%), but 13 of the 14 hits are cyclone Nivar 2020. ERA5's hits are mostly Nivar, so it is on probation until the Kharif 2026 CCE tests it out of sample.
 
 **"Radar flood: how do you know it's not paddy puddling?"**
 Radar alone *can't* tell, and we measured that: Sentinel-1 alone performed at about chance (33% precision vs a 36% base rate). So we use three filters:
@@ -163,7 +176,7 @@ It is a trained classifier: EfficientNet features plus logistic regression.
 
 **"What is the premium?"**
 - Pure burn cost 2001–2024: season cover dual **2.5%** of sum insured (rainfall-only 13.2%).
-- YSR with both covers: **5.9%** (4.3–8.2%).
+- YSR with both covers: **9.4%** (7.2–11.4%) vs 24.9% rainfall-only (after the radar fix; it was 5.9% when un-imaged mandals were read as dry, which under-counted payouts).
 - The insurer adds loading. [7.12]
 
 **"What sum insured?"**
@@ -180,7 +193,7 @@ The notified DLTC scale of finance; it is an input on the Farmer payouts screen,
 - Relief enumeration starts within 72 h.
 
 **"What does the Department get from this tomorrow?"** (Arnab)
-- A ranked list of 20 mandals for enumeration with standing acres from e-Panta, plus alerts, inside 72 hours.
+- A ranked list of 15 mandals for enumeration with standing acres from e-Panta, plus alerts, inside 72 hours.
 - An insurance decision from a written rule, applied the same way as in the back-tests.
 
 **"What if the farmer lost a crop and the index didn't pay?"**
@@ -191,7 +204,7 @@ The notified DLTC scale of finance; it is an input on the Farmer payouts screen,
 
 ## Say these limits first
 1. CCE is available for YSR only, 7 seasons; no PMFBY claims; no APSDMA maps.
-2. Radar is within 72 h for 8 of 22 events.
+2. Radar is within 72 h with probability 24–49% per pilot mandal (12-day repeat); for Arnab 5 of 15 relief mandals.
 3. Parcel polygons exist for YSR only (about 56% of villages).
 4. Irrigation is unknown for about 70% of YSR acreage.
 5. ERA5 was chosen after seeing the data and is read at the mandal centroid.
@@ -204,7 +217,7 @@ The notified DLTC scale of finance; it is an input on the Farmer payouts screen,
 - Rupees need the notified sum insured (scale of finance). It wasn't shared and we did not invent it: the batch is in sum-insured acres until the Department fills one table.
 - Relief: each Arnab mandal is a case. AEO enters verified hectares → sanction computed from the MHA SDRF norms (₹8,500 / ₹17,000 per ha, ≥33%) → paid. Every step is logged by role with a hash chain.
 
-**"₹17–34 crore relief for Arnab: where does that come from?"**
+**"₹12.6–25.2 crore relief for Arnab: where does that come from?"**
 - Standing acres from e-Panta 2026 × 30% (share of acute-trigger mandal-years with CCE loss ≥33%, YSR, CI 17–48%) × MHA rate. Irrigation is unknown in Manyam, so rainfed and irrigated ends are both shown.
 - It is a planning number for the SDRF memorandum, not a payment list. With no trigger, 24% of mandal-years also reach 33%, so the trigger separates weakly; we say so on the screen.
 

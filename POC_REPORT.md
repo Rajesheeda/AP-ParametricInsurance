@@ -1,11 +1,37 @@
 # Parametric Insurance & Disaster Loss Assessment: POC technical report
 
-**Case 100075 · hierachAi Technologies · draft of 2026-10-30**
+**Case 100075 · hierachAi Technologies · draft of 2026-10-30, corrected 2026-11-16 (section 0)**
 **Pilot:**
 - Kharif: Palnadu, YSR Kadapa, Parvathipuram Manyam.
 - Rabi: Chittoor, proposed in place of East Godavari because no East Godavari data was available.
 
 **Status of validation:** the triggers have been tested against **real CCE yields** shared by the Department for YSR Kadapa (26 mandals, Kharif 2019–2025, section 7.4). No CCE or claims were available for Palnadu, Parvathipuram Manyam or Chittoor; validation there is interim (second sensor only).
+
+---
+
+## 0. Correction of 14–16 Nov 2026: each mandal scored with its own radar pass
+
+**What was wrong.** The radar step scored a whole district with the first orbit-matched Sentinel-1 pass. Mandals outside that pass's footprint read **0% flooded instead of "not imaged"**: Palnadu 26 of 28 mandals in 5 of 7 events; YSR CCE windows 19 of 40 mandals in 11 of 17. Found by the footprint check in `poc/SAR_DEPTH_STUDY.md` (amendment 1, committed `d975cc9` before any accuracy was scored).
+**Fix (not tuning).** Each mandal is scored by the earliest orbit-matched pass in the 12-day window that covers at least half of its cropland; flood share is over imaged cropland only; a mandal with no such pass is NOT IMAGED. Detection physics, thresholds and masks are unchanged. Old outputs are kept in `gee_out/v1_district_pass/` and `data/derived_v1_snapshot/`.
+
+| Result | As originally run | Corrected |
+|---|---|---|
+| Lane 1 product vs CCE (YSR, 80% indemnity) | 9 payouts, 7 real (78%, CI 45–94), catches 12% | **17 payouts, 14 real (82%, CI 59–94), catches 24%**; 13 of 14 hits are Nivar 2020 |
+| Same at 70% / 90% indemnity | – | 17 / 9 (53%, 31–74) · 17 / 16 (94%, 73–99) |
+| Sentinel-1 flood alone vs the gate (80%) | 33% (22–46): fails | **61 fired, 30 real, 49% (37–61) vs 36% base: passes** |
+| ERA5 × SAR (80%) | – | 16 / 13, 81% (57–93) |
+| Declared consensus × SAR | 17 / 2 | 17 / 3, 18% (6–41): still fails |
+| Cover B radar confirmation rate | 30% | 59% (16 of 27) |
+| Premium, YSR both covers (pure burn cost) | 5.9% (4.3–8.2) | **9.4% (7.2–11.4)** vs 24.9% rainfall-only |
+| CCE mandal-seasons with radar inside 72 h | 94 of 147 | 68 of 147 |
+| Positive control (Budameru 2024) | PASS | **PASS, unchanged** (5.61% vs 1.41%; 19 of 19 imaged) |
+| Cyclone Arnab index payouts | 0 | **1: Salur 34.5%** (not imaged on 30 Oct; 4 Nov pass, T+172 h: 0.60% vs 0.07% floor) |
+
+**Two things we say plainly.** (a) The Arnab change is a bug fix made after the pre-registration, dated and committed before any scoring. (b) A 0.6% radar signal unlocking a 34.5% payout is a design weakness: radar confirms, rainfall sets the amount. A minimum-signal rule is a candidate for next season and can enter only through the qualification gate.
+**Revisit (acquisition metadata, 2021–2026).** Sentinel-1 repeats every 12 days over the pilot mandals for the whole record: P(image within 72 h) = 24% (single-track mandals) to 49% (two tracks).
+**Flooded vegetation (declared test).** VV rise ≥ 3 dB: Budameru 5.4% of cropland vs 3.5% on a dry control date, ratio 1.55 < 2: no usable signal at C-band; the drop-only rule stays.
+**Not yet scored:** flood-map accuracy against Sentinel-2 (only 2 events have a clear optical view so far) and the coast-wide Arnab / Murasu district ranking (`poc/CYCLONE_TEST_2026.md`).
+Tables in sections 7.4–7.13 marked *as originally run* keep the first-run values for the record; the corrected values are the ones above.
 
 ---
 
@@ -27,7 +53,7 @@
 |---|---|---|
 | ≥75% correlation, triggers vs actual losses | **Not measurable with the data shared** | CCE exists for 1 of 4 districts and 7 seasons, and there are no PMFBY claims. Losses cluster by season, so 166 mandal-crop-years carry about 14 independent observations. A true r = 0.75 over 7 seasons has a 95% CI of −0.01 to 0.96; testing it needs about 25 seasons (section 7.13). |
 | ≥80% flood accuracy vs APSDMA | **No reference data shared** | Replaced by a positive control declared in advance (Budameru 2024: PASS) and a measured false-alarm floor per mandal. |
-| Loss assessment within 72 h | **Met for relief (Lane 2)** | Daily rainfall plus radar when it arrives (8 of 22 events inside 72 h); every result carries its image time. |
+| Loss assessment within 72 h | **Met for relief (Lane 2)** | Daily rainfall inside 72 h, plus radar when it arrives: P(Sentinel-1 image within 72 h) 24–49% per pilot mandal (12-day repeat); every result carries its image time. |
 | 5-year back-test vs PMFBY and CCE | **Done on what exists** | CCE 2019–2025 (YSR); premium back-test 2001–2024 for all Kharif pilot districts; no PMFBY claim amounts shared. |
 
 **Main findings**
@@ -37,18 +63,18 @@
 | Rainfall-trigger premium (pure burn cost), 1-in-5 trigger / 1-in-25 exit | **12.5%** of sum insured (7% to 20% across design choices) |
 | Agreement of rainfall triggers with satellite crop condition (MODIS VCI), mandal-season | Spearman **−0.13**: right direction, weak. This is the basis risk of rainfall-only cover. |
 | Same, district-year (drought districts) | **−0.35** YSR Kadapa, **−0.30** Palnadu, **0** Manyam (flood-driven) |
-| Sentinel-1 image inside 72 h of the event | **8 of 22** events (median 96 h) |
+| Sentinel-1 image inside 72 h of the event | P = **24–49%** per pilot mandal (12-day repeat, metadata 2021–2026); 8 of 22 events as originally run |
 | Sentinel-1 "flood" on dry control dates (false-alarm floor) | median 0.1–0.6% of cropland, up to 9.5% in one mandal |
 | Pilot events whose flooded cropland beat that floor within 72 h | **0 of 22** |
 | Positive control: Budameru / Krishna floods, Sep 2024 (rule declared in advance) | **PASS:** 5.6% flooded cropland vs 1.4% dry floor; up to 21% in the flooded mandals |
 | **Real CCE losses caught by weather triggers alone** (YSR, 166 mandal-crop-years, loss = yield < 80% of normal) | **7%** season trigger only; **37%** with the acute layer on ERA5 (agreement 60%). Below the ≥75% target. |
 | Seasons where the rainfall trigger and satellite agree on drought | Gurazala 2023 (cotton, chilli, paddy) |
-| **Lane 1 product vs real CCE** (YSR, both covers dual-triggered) | **9 payouts, 7 to real losses** (78%, 95% CI 45–94%), against a 36% base rate; catches 12% of losses |
+| **Lane 1 product vs real CCE** (YSR, both covers dual-triggered; corrected, section 0) | **17 payouts, 14 to real losses** (82%, 95% CI 59–94%), against a 36% base rate; catches 24% of losses; 13 of 14 hits are Nivar 2020 |
 | Same years, rainfall-only season cover (today's WBCIS structure) | 24 payouts, **20 with no real loss** (precision 17%) |
 | Rainfall source test: CHIRPS / ERA5 / GPM IMERG / 2-of-3 consensus (acute layer) | losses caught 10% / 37% / 47% / 37%; none catches the Nov 2021 floods (section 7.8) |
 | Per-farmer cover, 6 pilot mandals, Kharif 2023–25 | **522,208** e-Panta bookings priced on their own sowing week; **109,039** would flip between paid and not paid under a mandal calendar (21,289 of 221,555 in YSR and Palnadu; section 7.10) |
-| **Premium, pure burn cost 2001–2024** (section 7.12) | Season cover **13.2% → 2.5%** of sum insured with the dual trigger; YSR both covers **5.9%** (4.3–8.2%) vs 24.9% rainfall-only |
-| **Live event: Cyclone Arnab** (landfall 28 Oct 2026; section 7.14) | Same code as the back-tests, run on the storm. Relief list and alerts at **T+69 h**: **16** (20 after the 31 Oct rain update) mandals opened for relief enumeration; **6** Manyam mandals above the rainfall trigger (provisional); Sentinel-1 at **T+52 h** shows no flood on standing crops above the floor, so **0** index payouts where rainfall-only cover would pay 6 |
+| **Premium, pure burn cost 2001–2024** (section 7.12) | Season cover **13.2% → 2.5%** of sum insured with the dual trigger; YSR both covers **9.4%** (7.2–11.4%, corrected) vs 24.9% rainfall-only |
+| **Live events: Cyclones Arnab and Murasu** (28 Oct, 3 Nov 2026; section 7.14) | Arnab: relief list and alerts at **T+69 h** (16 mandals; **15** on final ERA5); rainfall-only cover would pay **22–80%** in 6 Manyam mandals; radar confirms **1 (Salur 34.5%)**, holds 5; 5 of 15 relief mandals imaged inside 72 h. Murasu: **20** Palnadu mandals to relief, **0** index payouts (all below the 1-in-5 level); Chilakaluripet 22.4% flooded vs 2.0% floor is the basis-risk example |
 | Photo quality gate (thresholds from 982 Department photos) | **91%** of held-out genuine photos accepted, **100%** of blurred / dark / overexposed / low-resolution copies refused |
 | False-positive reduction from the standing-crop gate (Michaung 2023, YSR, parcel level) | **60%** of radar-flagged parcels removed (harvested or not yet sown) |
 
@@ -455,7 +481,7 @@ The problem statement asks for *estimated yield loss* within 72 hours. Each deci
 | Sentinel-1 flood alone | 52 | 17 | 33% (22–46) | 29% |
 | Dual: consensus AND Sentinel-1 (declared design) | 17 | 2 | 12% (3–34) | 3% |
 | **Dual: ERA5 AND Sentinel-1** | 8 | 6 | 75% (41–93) | 10% |
-| **Lane 1 product: season dual OR ERA5 × Sentinel-1** | 9 | 7 | **78% (45–94)** | 12% |
+| **Lane 1 product: season dual OR ERA5 × Sentinel-1** *(as originally run; corrected 17 / 14, 82% (59–94), 24%: section 0)* | 9 | 7 | **78% (45–94)** | 12% |
 
 **What happened, in order:**
 1. **The declared consensus design failed.** CHIRPS and IMERG flag October 2024, a season with about 2% loss.
@@ -505,7 +531,7 @@ The problem statement asks for *estimated yield loss* within 72 hours. Each deci
 | Palnadu | Cotton / Paddy / Chilli | 12.8 / 14.2 / 14.0% | 3.0 / 2.7 / 1.9% | about 1 in 5 → 1 in 20–30 |
 | Parvathipuram Manyam | Paddy | 11.4% | 2.7% | about 1 in 5 → 1 in 25 |
 | YSR Kadapa | Catastrophe cover (B) | 11.9% | 3.5% (1.9–5.8) | – |
-| **YSR, both covers** | | **24.9%** | **5.9% (4.3–8.2)** | |
+| **YSR, both covers** *(as originally run; corrected 9.4% (7.2–11.4))* | | **24.9%** | **5.9% (4.3–8.2)** | |
 
 **Reading:**
 - The dual trigger pays in about one season in twenty-five instead of one in five. Its premium is a fifth of rainfall-only cover.
@@ -525,7 +551,7 @@ The problem statement asks for *estimated yield loss* within 72 hours. Each deci
 |---|---|---|---|---|
 | Season cover, rainfall only | 7% | 0–29% | 17% | 0–29% |
 | Season + ERA5 acute layer | 37% | **0–82%** | 43% | 0–95% |
-| Lane 1 product (dual) | 12% | 0–27% | 78% | 50–86% |
+| Lane 1 product (dual) *(as originally run; corrected POD 24%, CI to 55%)* | 12% | 0–27% | 78% | 50–86% |
 
 3. **Correlation over seasons.** A true r = 0.75 measured over 7 seasons has a Fisher-z 95% interval of **−0.01 to 0.96**, which cannot be distinguished from zero. About **25 seasons** are needed before a true 0.75 has a lower bound above 0.5.
 4. **Detection.** Estimating a 75% detection rate to ±10 points needs about **73 independent loss events**. YSR supplies under one per season, so pooling CCE across the State's districts is the route.
@@ -548,7 +574,7 @@ The problem statement asks for *estimated yield loss* within 72 hours. Each deci
 - The three models disagree widely: 126–262 mm over 3 days at Balijipeta.
 
 **Radar (Lane 1 second trigger, Lane 2 priority).**
-- Sentinel-1, relative orbit 121, 30 Oct 00:13 UTC (T+52 h). Orbit-matched with 5 pre-event images.
+- Sentinel-1, relative orbit 121, 30 Oct 00:13 UTC (T+52 h), orbit-matched with 5 pre-event images. Corrected per-mandal pass selection (section 0): this pass covers 5 of the 15 relief mandals; the other 10 were first imaged on 4 Nov (T+172 h).
 - Otsu water threshold −21.3 dB from 551 known-water samples, within the usual −21 to −24 dB.
 - Flooded cropland is 0–0.9% in 14 of 15 Manyam mandals, each below its own dry-date floor. Palakonda shows 2.8%, below its 6.7% floor.
 - **No mandal is confirmed, so there are no index payouts.**
@@ -582,13 +608,13 @@ The problem statement asks for *estimated yield loss* within 72 hours. Each deci
   - Amount = payout % × sum insured × acres. Sum insured is the notified scale of finance (DLTC / SLCCCI). No AP value was shared or found, so it is a Department input (`poc/config/sum_insured.csv`). Until it is filled, batches are stated in sum-insured acres, never in invented rupees.
   - Gurazala K2023: 13,096 lines, 16,324 acres, 8,695 sum-insured acres. It is the only settled pilot mandal-season that paid.
   - States: CALCULATED → APPROVED → SENT TO INSURER → PAID. Approval is refused if the batch file's SHA-256 has changed since calculation.
-- **Lane 2 SDRF relief cases** (live event: Cyclone Arnab, 20 mandals).
+- **Lane 2 SDRF relief cases** (live event: Cyclone Arnab, 15 mandals on final ERA5).
   - States: OPENED → EVIDENCE RECEIVED (an accepted photo) → AEO VERIFIED ≥33% (rainfed / irrigated ha) or CLOSED: BELOW 33% → SANCTIONED → PAID.
   - The sanction is computed from the norms: MHA F.No.33-03/2020-NDM-I, 10 Oct 2022, item 5. Rates: ₹8,500/ha rainfed, ₹17,000/ha assured irrigation, ≥33% loss, ceiling 2 ha per farmer. The same item says input subsidy is adjusted for any PMFBY claim for the same calamity, which is exactly the Lane 1 / Lane 2 link.
 - **Relief budget estimate for Arnab.**
   - Formula: standing acres × share of acute-trigger CCE mandal-years with loss ≥33% × rate.
   - Share ≥33%: 30%, Wilson CI 17–48%, n=30, YSR. With no trigger, 24% of mandal-years also reach 33%. The trigger separates weakly, and mandal-years of one event are correlated (7.13), so the CI is optimistic.
-  - Result: **₹16.7 cr (all rainfed) to ₹33.5 cr (all irrigated)** at the central share, CI range ₹9.3–53.4 cr (20 mandals, 1.62 lakh standing acres).
+  - Result: **₹12.6 cr (all rainfed) to ₹25.2 cr (all irrigated)** at the central share, CI range ₹7.0–40.3 cr (15 mandals, 1.22 lakh standing acres). Salur also has a Lane 1 payout, so its SDRF input subsidy is reduced by the insurance claim at disbursement (MHA note to item 5)..
   - It sizes the SDRF memorandum. Who is paid is decided by the AEO's verified hectares.
   - Not applied, because the extracts carry no farmer ID: the 2 ha ceiling and the ₹1,000 / ₹2,000 minimum.
 - **Audit.** Every action is appended to a log with the SHA-256 of the previous entry. Editing or deleting a line shows as "chain broken". Officers are recorded by role, not by name.
@@ -610,7 +636,7 @@ The problem statement asks for *estimated yield loss* within 72 hours. Each deci
 
 1. Real CCE yields exist for YSR Kadapa only (2019–2025); none for Palnadu, Manyam or Chittoor, and no PMFBY claim amounts. Against CCE, weather triggers alone catch at most about a third of loss events (section 7.4). The dual-trigger Lane 1 product is precise (7 of 9 payouts to real losses) but catches only 12% of losses, and its catastrophe index was chosen after seeing 2019–25 data (section 7.9).
 2. Parcel boundaries exist only for YSR (about 56% of villages). Palnadu and Manyam run at mandal level; mandal-level flood is spread over cropland in proportion to crop area.
-3. Sentinel-1 meets 72 h for 8 of 22 events. Lane 2 relief responds inside 72 h with rainfall and photos; Lane 1 insurance settles when the radar image arrives. Every result carries its image date.
+3. Sentinel-1 meets 72 h with probability 24–49% per pilot mandal (12-day repeat; 8 of 22 events as originally run). Lane 2 relief responds inside 72 h with rainfall and photos; Lane 1 insurance settles when the radar image arrives. Every result carries its image date.
 4. SAR cannot tell disaster flooding from paddy puddling or Rabi irrigation. The e-Panta planting gate and the dry-control floor handle this, at the cost of blocking most acute index payouts in paddy (cases go to relief enumeration instead).
 5. FAO-56 stage lengths are generic: AP chilli runs longer than FAO "peppers", and local variety durations differ. Satellite phenology per parcel can replace them (data in hand for YSR 2023–26).
 6. Irrigation source is unknown for about 70% of YSR acreage and exists for Kharif 2026 only.
