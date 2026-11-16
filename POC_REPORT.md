@@ -36,12 +36,14 @@
 - **Murasu, "Prakasam and Guntur (Bapatla) above Nellore": PASS.** Prakasam 73,451, Guntur 19,042, Nellore 14,496 ha. Seasonal check: Prakasam 9.6% of cropland under water vs 0.9% in the same weeks of 2024, so the signal is real, not land preparation; Nellore 3.0% vs 7.7% in 2024, no signal, which fits "largely escaped". ERA5 showed little rain at Prakasam: radar caught what rain missed.
 - **Within 72 h of landfall:** Arnab 2 of 7 districts (52 h); Murasu 1 of 4 (Krishna 29 h; the others 149 h).
 - **Next season, each through the gate:** (1) false-alarm floor from the same calendar weeks of calm years, not Feb/Mar; (2) minimum radar margin above the floor (Salur); (3) wind trigger relative to each mandal's own ERA5 history; (4) 72 h stays a rain / photo / AEO promise, radar confirms later.
-**Flood-map accuracy against Sentinel-2 (PROVISIONAL 16 Nov, 5 events; rules: `poc/SAR_DEPTH_STUDY.md` A + amendment 1).** Frozen method scored inside its own radar footprint; reference = Sentinel-2 MNDWI new water within 1 day; Olofsson / Stehman stratified estimator, 300 points per stratum per event. Pooled over Chittoor Nov 2021, Mandous 2022, Manyam 9 and 20 Sep 2026, Palnadu Sep 2020:
+**Flood-map accuracy against Sentinel-2 (final 16 Nov; 5 of 24 events scorable; rules: `poc/SAR_DEPTH_STUDY.md` A + amendment 1).** Frozen method scored inside its own radar footprint; reference = Sentinel-2 MNDWI new water within 1 day; Olofsson / Stehman stratified estimator, 300 points per stratum per event. Pooled over Chittoor Nov 2021, Mandous 2022, Manyam 9 and 20 Sep 2026, Palnadu Sep 2020:
 - Overall accuracy **96.4%** (CI 95.0–97.9): the PPT ≥80% criterion is met against an independent sensor (APSDMA maps were not shared).
 - Flood-class precision **68%** (CI 65–70); recall **9%** (CI 6–13); F1 0.16. Overall accuracy is inflated because most land is dry, as declared in advance.
 - Radar is usually right when it says flood but misses most of the water optical sees; in the paddy season MNDWI also sees water standing in growing paddy, which C-band VH under a canopy does not show as a drop.
-- Not scorable (declared rule): 15 other events had no clear Sentinel-2 image within 1 day or no clear cropland in the radar footprint (monsoon cloud); sampling of the remaining events continues.
-- Sensitivity, not adopted this season: water threshold +1 dB raises pooled F1 to 0.26; a Lee speckle filter does not help.
+- Of 24 events assessed: 5 scored; 2 sampled but below the declared minimum of 30 reference-flood points (Asani 2022: 1, Palnadu Jul 2023: 4); 17 unscorable: 7 had no Sentinel-2 image within 1 day (incl. the Budameru positive control), 10 had no clear cropland inside the radar footprint (cloud, incl. Arnab and Montha).
+- Per event: F1 0.07–0.48; precision 71–97% in 4 of 5 events, 25% for Palnadu Sep 2020.
+- Single-image thresholding (no change detection): precision 33%, F1 0.15, which confirms change detection is needed. Change criterion 2 / 4 dB: F1 0.16 / 0.15. Results file: `data/derived/sar_depth_accuracy.json`; write-up `poc/SAR_DEPTH_RESULTS.md`.
+- Sensitivity, not adopted this season: water threshold +1 dB raises pooled F1 to 0.26 (precision 77%, recall 16%); a Lee speckle filter gives F1 0.17.
 - Consequence for the design: relief never depends on radar; in insurance a radar miss holds the payout and becomes a basis-risk case covered by relief.
 Tables in sections 7.4–7.13 marked *as originally run* keep the first-run values for the record; the corrected values are the ones above.
 
@@ -64,7 +66,7 @@ Tables in sections 7.4–7.13 marked *as originally run* keep the first-run valu
 | Target (PPT) | Status | Why |
 |---|---|---|
 | ≥75% correlation, triggers vs actual losses | **Not measurable with the data shared** | CCE exists for 1 of 4 districts and 7 seasons, and there are no PMFBY claims. Losses cluster by season, so 166 mandal-crop-years carry about 14 independent observations. A true r = 0.75 over 7 seasons has a 95% CI of −0.01 to 0.96; testing it needs about 25 seasons (section 7.13). |
-| ≥80% flood accuracy vs APSDMA | **Met against Sentinel-2 (PROVISIONAL 16 Nov, 5 events)**; APSDMA maps not shared | Overall accuracy 96.4% (CI 95.0–97.9), but flood-class precision 68% and recall 9% (section 0). Positive control declared in advance (Budameru 2024: PASS) and a measured false-alarm floor per mandal. |
+| ≥80% flood accuracy vs APSDMA | **Met against Sentinel-2 (5 of 24 events scorable)**; APSDMA maps not shared | Overall accuracy 96.4% (CI 95.0–97.9), but flood-class precision 68% and recall 9% (section 0). Positive control declared in advance (Budameru 2024: PASS) and a measured false-alarm floor per mandal. |
 | Loss assessment within 72 h | **Met for relief (Lane 2)** | Daily rainfall inside 72 h, plus radar when it arrives: P(Sentinel-1 image within 72 h) 24–49% per pilot mandal (12-day repeat); every result carries its image time. |
 | 5-year back-test vs PMFBY and CCE | **Done on what exists** | CCE 2019–2025 (YSR); premium back-test 2001–2024 for all Kharif pilot districts; no PMFBY claim amounts shared. |
 
