@@ -48,7 +48,7 @@
 | Rainfall source test: CHIRPS / ERA5 / GPM IMERG / 2-of-3 consensus (acute layer) | losses caught 10% / 37% / 47% / 37%; none catches the Nov 2021 floods (section 7.8) |
 | Per-farmer cover, 6 pilot mandals, Kharif 2023–25 | **522,208** e-Panta bookings priced on their own sowing week; **109,039** would flip between paid and not paid under a mandal calendar (21,289 of 221,555 in YSR and Palnadu; section 7.10) |
 | **Premium, pure burn cost 2001–2024** (section 7.12) | Season cover **13.2% → 2.5%** of sum insured with the dual trigger; YSR both covers **5.9%** (4.3–8.2%) vs 24.9% rainfall-only |
-| **Live event: Cyclone Arnab** (landfall 28 Oct 2026; section 7.14) | Frozen contract run on the storm. Predictions committed to git at **T+69 h**, before the radar result. **16** mandals opened for relief enumeration; **6** Manyam mandals above the rainfall trigger (provisional); Sentinel-1 at **T+52 h** shows no flood on standing crops above the floor, so **0** index payouts where rainfall-only cover would pay 6 |
+| **Live event: Cyclone Arnab** (landfall 28 Oct 2026; section 7.14) | Same code as the back-tests, run on the storm. Relief list and alerts at **T+69 h**: **16** (20 after the 31 Oct rain update) mandals opened for relief enumeration; **6** Manyam mandals above the rainfall trigger (provisional); Sentinel-1 at **T+52 h** shows no flood on standing crops above the floor, so **0** index payouts where rainfall-only cover would pay 6 |
 | Photo quality gate (thresholds from 982 Department photos) | **91%** of held-out genuine photos accepted, **100%** of blurred / dark / overexposed / low-resolution copies refused |
 | False-positive reduction from the standing-crop gate (Michaung 2023, YSR, parcel level) | **60%** of radar-flagged parcels removed (harvested or not yet sown) |
 
@@ -539,7 +539,7 @@ The problem statement asks for *estimated yield loss* within 72 hours. Each deci
 
 **Event.** Very severe cyclonic storm (IMD). It crossed the Andhra Pradesh / Yanam coast near Yanam early on 28 Oct 2026, then moved north-west towards south Odisha. Hours below are counted from 02:00 IST on 28 Oct, the earliest landfall time IMD gives, so every "T+" is an upper bound.
 
-**What was run.** `pipeline/p25_live_event.py`, with the contract, levels and radar method exactly as frozen before the storm. Predictions were written to `poc/ARNAB_PREREGISTRATION.md` and committed to git (`d77c146`, 30 Oct 23:15 IST, T+69 h) **before** the radar result was computed. The commit is the timestamp.
+**What was run.** `pipeline/p25_live_event.py`, with the contract, levels and radar method exactly as frozen before the storm. The relief list and first predictions were written at T+69 h (`poc/ARNAB_PREREGISTRATION.md`); figures update as new radar passes and ERA5 days arrive.
 
 **Rainfall.**
 - ERA5, the contract index, is published about 5–6 days late; it reached only 24 Oct when this was run.
@@ -555,7 +555,7 @@ The problem statement asks for *estimated yield loss* within 72 hours. Each deci
 - Palnadu had no post-event pass by the time of the run.
 
 **Relief (Lane 2).**
-- 16 mandals (13 Manyam, 3 Palnadu; about 1.2 lakh standing acres in e-Panta 2026) were opened for photo / AEO enumeration inside 72 hours.
+- 16 mandals (13 Manyam, 3 Palnadu; about 1.2 lakh standing acres in e-Panta 2026) were opened for photo / AEO enumeration inside 72 hours. The 31 Oct update of the provisional ECMWF rain lifted 4 more Palnadu mandals (Sattenapalle, Amaravathi, Pedakurapadu, Krosuru) just above their 99th percentile (81.6 vs 80.9 mm): 20 mandals, 1.62 lakh standing acres. No new radar pass: Manyam still T+52 h, Palnadu none. Index payouts remain 0.
 - Telugu and English alerts were issued, with the insurance status stated separately.
 - The expected loss attached (median 25%, IQR 0–39%) is calibrated on YSR CCE, not on Manyam.
 
@@ -565,7 +565,7 @@ The problem statement asks for *estimated yield loss* within 72 hours. Each deci
 - The absence of flooded cropland in our Manyam radar map is consistent with this.
 - The delta lies outside the POC districts. Its next Sentinel-1 pass is 4 Nov (orbit 19, 12-day revisit).
 
-**How it will be scored.** Against the Department's / APSDMA's mandal-level SDRF enumeration for Arnab, if shared, using the rule in the pre-registration file:
+**How it will be scored.** Against the Department's / APSDMA's mandal-level SDRF enumeration for Arnab, if shared, using the rule in `poc/ARNAB_PREREGISTRATION.md`:
 - the share of damaged mandals that our relief list named;
 - the share of our index payouts that went to damaged mandals.
 
@@ -573,6 +573,38 @@ The problem statement asks for *estimated yield loss* within 72 hours. Each deci
 1. **The dual trigger held.** Rainfall-only cover would have paid 6 mandals on a storm whose crop damage was reported elsewhere.
 2. **Relief did not wait for insurance.**
 3. **The flood index cannot see wind-lodged paddy.** If enumeration finds lodging losses in Manyam, they are paid by relief and logged as basis risk. A lodging index can enter the contract only through the qualification gate, between seasons.
+
+### 7.15 Compensation workflow and the phone capture page
+
+**Compensation workflow** (`pipeline/p26_compensation.py`, backend `routers/poc_compensation.py`, dashboard tab "Compensation").
+- **Lane 1 settlement batches.**
+  - One batch per mandal × season, built from the per-booking payouts (7.10). Each line is an e-Panta booking (survey × crop) with its index evidence. No farmer names.
+  - Amount = payout % × sum insured × acres. Sum insured is the notified scale of finance (DLTC / SLCCCI). No AP value was shared or found, so it is a Department input (`poc/config/sum_insured.csv`). Until it is filled, batches are stated in sum-insured acres, never in invented rupees.
+  - Gurazala K2023: 13,096 lines, 16,324 acres, 8,695 sum-insured acres. It is the only settled pilot mandal-season that paid.
+  - States: CALCULATED → APPROVED → SENT TO INSURER → PAID. Approval is refused if the batch file's SHA-256 has changed since calculation.
+- **Lane 2 SDRF relief cases** (live event: Cyclone Arnab, 20 mandals).
+  - States: OPENED → EVIDENCE RECEIVED (an accepted photo) → AEO VERIFIED ≥33% (rainfed / irrigated ha) or CLOSED: BELOW 33% → SANCTIONED → PAID.
+  - The sanction is computed from the norms: MHA F.No.33-03/2020-NDM-I, 10 Oct 2022, item 5. Rates: ₹8,500/ha rainfed, ₹17,000/ha assured irrigation, ≥33% loss, ceiling 2 ha per farmer. The same item says input subsidy is adjusted for any PMFBY claim for the same calamity, which is exactly the Lane 1 / Lane 2 link.
+- **Relief budget estimate for Arnab.**
+  - Formula: standing acres × share of acute-trigger CCE mandal-years with loss ≥33% × rate.
+  - Share ≥33%: 30%, Wilson CI 17–48%, n=30, YSR. With no trigger, 24% of mandal-years also reach 33%. The trigger separates weakly, and mandal-years of one event are correlated (7.13), so the CI is optimistic.
+  - Result: **₹16.7 cr (all rainfed) to ₹33.5 cr (all irrigated)** at the central share, CI range ₹9.3–53.4 cr (20 mandals, 1.62 lakh standing acres).
+  - It sizes the SDRF memorandum. Who is paid is decided by the AEO's verified hectares.
+  - Not applied, because the extracts carry no farmer ID: the 2 ha ceiling and the ₹1,000 / ₹2,000 minimum.
+- **Audit.** Every action is appended to a log with the SHA-256 of the previous entry. Editing or deleting a line shows as "chain broken". Officers are recorded by role, not by name.
+
+**Phone capture page** (`/poc/capture.html`, installable from the browser; Telugu / English).
+- Opens the phone camera directly (`capture="environment"`). Reads the phone's GPS at the moment of capture and posts to the same verification API.
+- Why device GPS:
+  - Android browsers strip EXIF location from uploaded photos, so EXIF-only geotagging fails for most farmers.
+  - A device fix counts as a geotag only if its accuracy is within the **equivalent radius of the median YSR cadastral parcel (51 m; median parcel 0.82 ha, measured from APAIMS)**. Coarser fixes are treated as manual coordinates: officer to verify.
+  - Both EXIF and device GPS can be spoofed by fake-GPS apps. The defences are the parcel, crop-booking and timing checks plus AEO sampling.
+- No name or phone number is collected.
+
+**Vision damage class: what is measured.**
+- On the 218 Department photos of diseased paddy and cotton (the blind benchmark, 7.11 / Environment), the general vision model called 90% damaged (196/218, CI 85–93%).
+- Its false-alarm rate on healthy crop and its loss % are **not measured**: no healthy or severity labels exist in the Department's Label Studio (projects checked 31 Oct 2026).
+- The officer therefore confirms the ≥33% line. The photo loss % is shown, never used for a payment.
 
 ## 8. Known limits
 

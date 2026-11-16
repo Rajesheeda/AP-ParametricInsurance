@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="te">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1530">
+<link rel="manifest" href="manifest.json">
+<title>Crop Photo · పంట ఫోటో</title>
+<style>
+:root{--bg:#0b1530;--card:#111d3d;--line:#22325c;--ink:#e8eefc;--muted:#93a3c7;--pay:#34d399;--ver:#fbbf24;--bad:#f87171;--pend:#60a5fa;
+  --grad:linear-gradient(135deg,#38bdf8,#818cf8)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Telugu",sans-serif}
+main{max-width:520px;margin:0 auto;padding:16px 16px 40px}
+h1{font-size:20px;margin:6px 0 2px}.sub{color:var(--muted);font-size:13px;margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+label{display:block;font-size:12.5px;color:var(--muted);margin:10px 0 5px}
+select,input{width:100%;font:inherit;padding:11px 12px;border-radius:11px;border:1px solid var(--line);background:#0c1734;color:var(--ink)}
+.shoot{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%;min-height:150px;border:2px dashed #3a4f86;border-radius:16px;cursor:pointer;text-align:center;color:var(--muted)}
+.shoot b{color:var(--ink);font-size:17px}.shoot input{display:none}
+.shoot img{max-width:100%;max-height:260px;border-radius:12px}
+.btn{display:block;width:100%;border:0;border-radius:13px;padding:14px;font:600 16px system-ui;color:#fff;background:var(--grad);margin-top:12px}
+.btn:disabled{opacity:.45}
+.gps{font-size:13px;margin-top:8px}.ok{color:var(--pay)}.warn{color:var(--ver)}.bad{color:var(--bad)}
+.verdict{font-weight:700;padding:10px 12px;border-radius:12px;margin-bottom:10px}
+.v-ok{background:rgba(52,211,153,.14);color:var(--pay)}.v-warn{background:rgba(251,191,36,.14);color:var(--ver)}.v-bad{background:rgba(248,113,113,.14);color:var(--bad)}
+.chk{display:flex;gap:8px;padding:6px 0;border-top:1px solid var(--line);font-size:13px}.chk b{min-width:110px}
+.note{color:var(--muted);font-size:12px}
+ul{padding-left:18px;margin:6px 0}
+.manual{display:none}.manual.show{display:block}
+.row{display:flex;gap:8px}.row>*{flex:1}
+</style>
+</head>
+<body>
+<main>
+  <h1>పంట నష్టం ఫోటో · Crop loss photo</h1>
+  <p class="sub">AP Parametric Insurance POC · relief evidence (Lane 2). ఫోటో insurance payout ని మార్చదు. A photo never changes the insurance payout.</p>
+
+  <form id="f" class="card">
+    <label>సంఘటన · Event</label><select name="event_id" id="ev"></select>
+    <div class="row">
+      <div><label>పంట · Crop (e-Panta)</label><select name="claimed_crop">
+        <option>Paddy</option><option>Cotton</option><option>Red Chillies</option><option>Groundnut</option><option>Maize</option><option>Red gram</option></select></div>
+      <div><label>సర్వే నంబర్ · Survey no. (optional)</label><input name="claimed_survey" inputmode="text" placeholder="e.g. 114-3A"></div>
+    </div>
+    <label>ఫోటో · Photo</label>
+    <label class="shoot" id="shoot"><span id="prev"><b>📷 ఫోటో తీయండి · Take photo</b><br><span class="note">Stand inside your field · location on</span></span>
+      <input type="file" name="file" id="file" accept="image/*" capture="environment" required></label>
+    <div class="gps" id="gps"></div>
+    <a href="#" id="typeIt" class="note" style="color:var(--pend);display:inline-block;margin-top:6px">ఫీల్డ్ coordinates టైప్ చేయండి · Type the field's coordinates instead</a>
+    <div class="manual" id="manual">
+      <div class="row"><div><label>Latitude</label><input name="lat" id="lat" inputmode="decimal"></div><div><label>Longitude</label><input name="lon" id="lon" inputmode="decimal"></div></div>
+      <div class="note">Typed coordinates are lower-trust: an officer verifies before relief.</div>
+    </div>
+    <button class="btn" id="go" disabled>పంపండి · Submit</button>
+  </form>
+  <div id="out"></div>
+  <p class="note">No name or phone number is collected. Location, time and the photo are stored as relief evidence. Full dashboard: <a href="./" style="color:var(--pend)">/poc/</a></p>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const esc = x => String(x ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c]);
+let fix = null, taken = null, LIM = null;
+
+fetch("/api/v1/poc/photo/events").then(r => r.json()).then(j => {
+  LIM = j.data.gps_accuracy_limit_m;
+  $("#ev").innerHTML = j.data.events.map(e => `<option value="${esc(e.id)}">${e.live ? "LIVE · " : ""}${esc(e.name)} · ${esc(e.district)} · ${esc(e.start)}</option>`).join("");
+}).catch(() => { $("#ev").innerHTML = "<option value=''>Events unavailable (offline)</option>"; });
+
+function locate() {
+  if ($("#manual").classList.contains("show")) return;
+  if (!("geolocation" in navigator) || !window.isSecureContext) {
+    $("#gps").innerHTML = `<span class="warn">Phone GPS is unavailable on this connection (needs HTTPS). Enter the field's coordinates.</span>`;
+    $("#manual").classList.add("show"); return;
+  }
+  $("#gps").innerHTML = `<span class="note">Reading phone GPS…</span>`;
+  navigator.geolocation.getCurrentPosition(p => {
+    if ($("#manual").classList.contains("show")) return;
+    fix = {lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy};
+    const good = LIM == null || fix.acc <= LIM;
+    $("#gps").innerHTML = `<span class="${good ? "ok" : "warn"}">📍 ${fix.lat.toFixed(5)}, ${fix.lon.toFixed(5)} · accuracy ${Math.round(fix.acc)} m</span>` +
+      (good ? "" : `<div class="note">Coarser than the median parcel radius (${LIM} m): step into the open and retake for a better fix.</div>`);
+  }, err => {
+    $("#gps").innerHTML = `<span class="warn">Location refused or unavailable (${esc(err.message)}). Enter coordinates.</span>`;
+    $("#manual").classList.add("show");
+  }, {enableHighAccuracy: true, timeout: 20000, maximumAge: 0});
+}
+
+$("#typeIt").onclick = e => {
+  e.preventDefault();
+  fix = null;
+  $("#manual").classList.add("show");
+  $("#gps").innerHTML = `<span class="warn">Using typed coordinates (lower trust: officer verifies).</span>`;
+};
+
+$("#file").onchange = () => {
+  const f = $("#file").files[0];
+  if (!f) return;
+  taken = new Date();
+  $("#prev").innerHTML = `<img src="${URL.createObjectURL(f)}" alt="photo"><div class="note">${esc(f.name)} · ${Math.round(f.size / 1024)} KB · ${taken.toLocaleString("en-IN")}</div>`;
+  $("#go").disabled = false;
+  locate();
+};
+
+const cls = v => v.startsWith("PHOTO CONFIRMS") ? "v-ok" : (v.startsWith("RETAKE") || v.startsWith("INVALID")) ? "v-bad" : "v-warn";
+const te = v => v.startsWith("RETAKE") ? "మళ్ళీ ఫోటో తీయండి" : v.startsWith("INVALID") ? "ఫోటో చెల్లదు — AEO పొలం సందర్శన" :
+  v.startsWith("PHOTO CONFIRMS") ? "నష్టం నమోదైంది — relief enumeration కి పంపబడింది" : v.includes("MANUAL GPS") ? "నష్టం కనిపిస్తోంది — AEO ధృవీకరణ అవసరం" : "నష్టం కనిపించలేదు";
+
+$("#f").onsubmit = async ev => {
+  ev.preventDefault();
+  const fd = new FormData($("#f"));
+  const pad = n => String(n).padStart(2, "0");
+  if (taken) fd.set("taken", `${taken.getFullYear()}-${pad(taken.getMonth() + 1)}-${pad(taken.getDate())}T${pad(taken.getHours())}:${pad(taken.getMinutes())}`);
+  if (fix) { fd.set("lat", fix.lat); fd.set("lon", fix.lon); fd.set("gps_source", "device"); fd.set("gps_accuracy", fix.acc); }
+  else { if (!fd.get("lat")) fd.delete("lat"); if (!fd.get("lon")) fd.delete("lon"); }
+  if (!fd.get("claimed_survey")) fd.delete("claimed_survey");
+  $("#go").disabled = true; $("#go").textContent = "Checking… · పరిశీలిస్తోంది";
+  try {
+    const r = await fetch("/api/v1/poc/photo/verify", {method: "POST", body: fd});
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || r.status);
+    const d = j.data;
+    $("#out").innerHTML = `<div class="card"><div class="verdict ${cls(d.verdict)}">${esc(te(d.verdict))}<br><span style="font-weight:600">${esc(d.verdict)}</span></div>
+      ${d.resolution ? `<div style="margin-bottom:8px">${esc(d.resolution)}</div>` : ""}
+      ${d.checks.map(c => `<div class="chk"><span class="${c.ok === true ? "ok" : c.ok === false ? "bad" : "note"}">${c.ok === true ? "✓" : c.ok === false ? "✗" : "•"}</span><b>${esc(c.check)}</b><span>${esc(c.detail)}${c.note ? `<div class="note">${esc(c.note)}</div>` : ""}</span></div>`).join("")}
+      ${d.advisory ? `<div style="margin-top:10px"><b>సూచనలు · What to do now</b> <span class="note">(${esc(d.advisory.label)}, officer to confirm)</span><ul>${d.advisory.actions.map(a => `<li>${esc(a)}</li>`).join("")}</ul><div class="note">${esc(d.advisory.sources.join("; "))}</div></div>` : ""}</div>`;
+    $("#out").scrollIntoView({behavior: "smooth"});
+  } catch (e) {
+    $("#out").innerHTML = `<div class="card bad">Could not submit: ${esc(e.message)}. Keep the photo and try again when online.</div>`;
+  }
+  $("#go").disabled = false; $("#go").textContent = "పంపండి · Submit";
+};
+</script>
+</body>
+</html>

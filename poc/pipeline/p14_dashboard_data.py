@@ -41,9 +41,15 @@ a = pd.read_csv(DERIVED / "assessment_pilot.csv", dtype={"district_code": str})
 ev = pd.read_csv(DERIVED / "flood_events_gee3.csv", dtype={"district_code": str})
 fl = pd.concat([pd.read_parquet(f) for f in glob.glob(str(POC / "data" / "gee_out" / "out_flood_mandal_*.parquet"))])
 fl = fl[~fl.event_id.str.startswith("CTRL_")]
-fe = fl.groupby("event_id").agg(post=("post_image_time", "first"), hours=("hours_after_event_end", "first"),
+# each mandal has its own pass; NOT IMAGED mandals carry no time, so take the earliest pass over imaged rows
+fl["post_ts"] = pd.to_datetime(fl.post_image_time, errors="coerce")
+fl["hours_after_event_end"] = pd.to_numeric(fl.hours_after_event_end, errors="coerce")
+fe = fl.groupby("event_id").agg(post_ts=("post_ts", "min"), hours=("hours_after_event_end", "min"),
                                 orbit_matched=("orbit_matched", "first"), t_post=("t_post_db", "first"),
-                                flood_ha=("crop_flood_ha", "sum"), crop_ha=("cropland_ha", "sum")).reset_index()
+                                flood_ha=("crop_flood_ha", "sum"), crop_ha=("cropland_ha", "sum"),
+                                mandals=("mid", "size"), imaged=("imaged", "sum")).reset_index()
+fe["post"] = fe.post_ts.dt.strftime("%Y-%m-%d %H:%M")
+fe = fe.drop(columns="post_ts")
 fe["within_72h"] = fe.hours <= 72
 
 trig = pd.read_parquet(DERIVED / "trigger_annual_payouts.parquet")
@@ -121,6 +127,7 @@ data = dict(
     premium=_json("premium_lane1.json"),
     power=_json("evidence_power.json"),
     live=_json("live_event_arnab.json"),
+    comp=_json("compensation.json"),
     farmer_summary=_json("farmer_payouts_summary.json"),
     farmers=farmers,
     cat_events=pd.read_csv(cat_f).replace({np.nan: None}).to_dict("records") if cat_f.exists() else [],
@@ -151,3 +158,7 @@ payload = json.dumps(clean(data), ensure_ascii=False).replace("</", "<\\/")
 html = html.replace('<script src="data.js"></script>', f"<script>window.POC = {payload};</script>")
 (OUT / "index.html").write_text(html, encoding="utf-8")
 print("dashboard written:", OUT / "index.html", f"({(OUT / 'index.html').stat().st_size / 1024:.0f} KB)")
+# phone capture page (Module B app): served next to the dashboard, talks to the same photo API
+for f in ["capture.html", "manifest.json", "icon.svg"]:
+    (OUT / f).write_bytes((POC / "dashboard_src" / f).read_bytes())
+print("capture page written:", OUT / "capture.html")

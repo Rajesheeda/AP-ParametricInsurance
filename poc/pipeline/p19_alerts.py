@@ -5,9 +5,13 @@ NO PAYOUT decisions produce no alert.
 Telugu text is machine-drafted and must be reviewed by the Department before any farmer-facing use.
 Output: alerts.csv
 """
+import sys
+
 import pandas as pd
 
 from common import DERIVED
+
+sys.stdout.reconfigure(encoding="utf-8")  # Telugu alerts print on a Windows cp1252 console
 
 CROP_TE = {"Paddy": "వరి", "Cotton": "పత్తి", "Red Chillies": "మిరప", "Groundnut": "వేరుశనగ", "Red gram": "కంది"}
 

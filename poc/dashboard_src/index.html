@@ -181,12 +181,79 @@ select,input[type=text],input:not([type]){font:inherit;padding:9px 11px;border:1
 .statrow{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-end;margin:6px 0 14px}
 .statrow div span{display:block;color:var(--muted);font-size:12px;margin-top:4px}
 .hidden{display:none !important}
+.btn.x{padding:5px 10px;font-size:11.5px;border-radius:9px}
+.sflow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 12px;font-size:12px;color:var(--muted)}
+.sflow b{padding:4px 10px;border-radius:999px;border:1px solid var(--line2);color:var(--ink2);font-weight:600}
 .tl{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:6px 0 4px}
 .tl .st{padding:11px 12px;border-radius:12px;background:rgba(15,23,42,.55);border:1px solid var(--line);font-size:12px;color:var(--ink2)}
 .tl .st b{display:block;font-family:var(--disp);font-size:13.5px;color:var(--ink);margin:6px 0 3px}
 .tl .st.done{border-color:rgba(52,211,153,.35)}.tl .st.wait{border-style:dashed}
 .livebadge{display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border-radius:999px;background:rgba(248,113,113,.14);border:1px solid rgba(248,113,113,.45);color:#fecaca;font-size:11.5px;font-weight:700;letter-spacing:.6px}
 .livebadge::before{content:"";width:7px;height:7px;border-radius:50%;background:#f87171;animation:pulse 1.8s infinite}
+/* ---------- premium command-center layer (look only; content unchanged) ---------- */
+:root{--hair:linear-gradient(140deg,rgba(103,232,249,.38),rgba(99,102,241,.10) 38%,rgba(125,165,230,.08) 70%,rgba(56,189,248,.22));
+  --card-fill:linear-gradient(162deg,rgba(17,30,60,.86),rgba(9,17,36,.92));--ease:cubic-bezier(.2,.7,.2,1)}
+html,body{background:radial-gradient(1200px 700px at 78% -10%,#0d2150 0%,rgba(13,33,80,0) 60%),radial-gradient(900px 600px at -10% 110%,#0b1a3f 0%,rgba(11,26,63,0) 60%),#060d1d}
+::selection{background:rgba(56,189,248,.35)}
+*{scrollbar-width:thin;scrollbar-color:rgba(125,165,230,.28) transparent}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:rgba(125,165,230,.25);border-radius:9px}
+/* cards: fine gradient hairline border, soft depth, gentle lift */
+.card,.mc,.pc,.kpi{border:1px solid transparent!important;background:var(--card-fill) padding-box,var(--hair) border-box!important;
+  box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 22px 50px -30px rgba(0,8,30,.95)!important;transition:transform .35s var(--ease),box-shadow .35s var(--ease)}
+.card:hover{box-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 26px 60px -30px rgba(8,40,110,.85)!important}
+.kpi:hover,.mc:hover{transform:translateY(-3px)}
+.card h3{letter-spacing:-.2px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px}
+.eyebrow::before{content:"";width:16px;height:1.5px;border-radius:2px;background:linear-gradient(90deg,var(--cyan),var(--violet))}
+/* page title */
+.top h2{font-size:24px;letter-spacing:-.4px;background:linear-gradient(90deg,#fff 0%,#cfe3ff 60%,#9fb8e8 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.top{padding-bottom:14px;border-bottom:1px solid transparent;border-image:linear-gradient(90deg,rgba(56,189,248,.35),rgba(99,102,241,.15) 40%,transparent 80%) 1}
+/* live status pill: rotating headline facts */
+.live{min-width:250px;justify-content:flex-start;background:rgba(10,24,52,.7);border-color:rgba(103,232,249,.28);color:var(--ink2);backdrop-filter:blur(10px)}
+.live #liveTxt{transition:opacity .4s var(--ease),transform .4s var(--ease);display:inline-block}
+.live #liveTxt.out{opacity:0;transform:translateY(-4px)}
+.live b{color:#fff;font-weight:700}
+/* sidebar */
+.side{background:linear-gradient(180deg,rgba(8,28,72,.88),rgba(5,16,42,.94))}
+.orb{position:relative;overflow:hidden}
+.orb::after{content:"";position:absolute;inset:-40%;background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.45) 50%,transparent 60%);animation:sheen 6s var(--ease) infinite}
+@keyframes sheen{0%,70%{transform:translateX(-60%)}100%{transform:translateX(60%)}}
+.nav button{position:relative}
+.nav button.on::before{content:"";position:absolute;left:-16px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:linear-gradient(180deg,var(--cyan),var(--violet))}
+.nav button:hover svg{transform:translateX(1px);opacity:1}.nav button svg{transition:transform .2s var(--ease)}
+/* hero: slow satellite drift */
+.hero{border:1px solid transparent;background:var(--hair) border-box;box-shadow:0 30px 80px -40px rgba(0,10,40,1)}
+.hero img{animation:drift 38s ease-in-out infinite alternate;transform-origin:62% 40%}
+@keyframes drift{from{transform:scale(1.04) translate(0,0)}to{transform:scale(1.14) translate(-2.2%,-1.6%)}}
+.hero h1{font-size:42px;letter-spacing:-1px}
+.hero .in{padding:36px 36px 32px}
+/* big numbers */
+.big,.kpi .v,.metric b{font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+.kpi .v{font-size:34px}
+.kpi::after{opacity:.07}
+.statrow>div{padding-right:22px;border-right:1px solid var(--line)}.statrow>div:last-child{border-right:0}
+/* buttons: light sweep */
+.btn{transition:transform .2s var(--ease),box-shadow .2s var(--ease)}
+.btn.p{position:relative;overflow:hidden}
+.btn.p::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.35) 50%,transparent 65%);transform:translateX(-120%);transition:transform .7s var(--ease)}
+.btn.p:hover::after{transform:translateX(120%)}
+.btn:hover{transform:translateY(-1px)}
+.btn.s:hover{border-color:rgba(103,232,249,.45)}
+/* tables */
+.tbl{border:1px solid transparent;background:linear-gradient(rgba(8,16,34,.6),rgba(8,16,34,.6)) padding-box,var(--hair) border-box}
+th{background:linear-gradient(180deg,rgba(20,36,70,.95),rgba(14,26,52,.95));color:#a9c0e8}
+table tr:hover td{background:rgba(56,189,248,.05)}
+table tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--cyan)}
+/* section entrance: movement only (tabs stay fully opaque) */
+section.show>*{animation:rise .5s var(--ease) both}
+section.show>*:nth-child(2){animation-delay:.05s}section.show>*:nth-child(3){animation-delay:.1s}section.show>*:nth-child(4){animation-delay:.15s}
+@keyframes rise{from{transform:translateY(10px)}to{transform:none}}
+/* tags and chips */
+.tag{backdrop-filter:blur(6px)}
+.chip{transition:border-color .2s}.chip:hover{border-color:rgba(103,232,249,.5)}
+.tl .st{background:var(--card-fill) padding-box,var(--hair) border-box;border:1px solid transparent}
+.tl .st.wait{background:rgba(10,20,42,.6);border:1px dashed var(--line2)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 @media(max-width:1100px){.g5{grid-template-columns:repeat(3,1fr)}.flow,.flow.f4{grid-template-columns:repeat(2,1fr)}.flow::before{display:none}}
 @media(max-width:900px){.app{grid-template-columns:1fr}.side{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center}.nav{flex-direction:row;flex-wrap:wrap}.side-card{display:none}
   .main{padding:16px}.g2,.g3,.g5{grid-template-columns:1fr}.hero h1{font-size:28px}.form-row{grid-template-columns:1fr}.barrow{grid-template-columns:110px 1fr 46px}}
@@ -204,6 +271,7 @@ select,input[type=text],input:not([type]){font:inherit;padding:9px 11px;border:1
     <button data-t="se"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Drought seasons</button>
     <button data-t="tr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>Insurance product</button>
     <button data-t="fp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Farmer payouts</button>
+    <button data-t="cp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>Compensation</button>
     <button data-t="al"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Farmer alerts</button>
     <button data-t="ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Photo verification</button>
     <button data-t="va"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Validation &amp; limits</button>
@@ -344,6 +412,20 @@ select,input[type=text],input:not([type]){font:inherit;padding:9px 11px;border:1
       <div class="tbl"><table id="fpTbl"></table></div><div class="note" id="fpNote"></div></div>
   </section>
 
+  <!-- COMPENSATION -->
+  <section id="cp">
+    <div class="card"><div class="eyebrow">Both lanes · from trigger to money</div><h3>Compensation workflow</h3>
+      <p class="cap" id="cpCap"></p><div class="statrow" id="cpKpi"></div><div class="note" id="cpOffline"></div></div>
+    <div class="card mt"><div class="eyebrow">Lane 2 · SDRF input subsidy · live event</div><h3 id="cpL2Title">Relief cases</h3>
+      <div class="sflow" id="cpL2Flow"></div><p class="cap" id="cpL2Cap"></p>
+      <div class="tbl"><table id="cpL2"></table></div><div class="note" id="cpL2Note"></div></div>
+    <div class="card mt"><div class="eyebrow">Lane 1 · parametric insurance</div><h3>Settlement batches</h3>
+      <div class="sflow" id="cpL1Flow"></div><p class="cap" id="cpL1Cap"></p>
+      <div class="tbl"><table id="cpL1"></table></div><div class="note" id="cpL1Note"></div></div>
+    <div class="card mt"><div class="eyebrow">Audit</div><h3>Workflow log</h3><p class="cap" id="cpLogCap"></p>
+      <div class="tbl"><table id="cpLog"></table></div></div>
+  </section>
+
   <!-- ALERTS -->
   <section id="al">
     <div class="card">
@@ -434,7 +516,7 @@ const rank = {PAY: 3, VER: 2, PEND: 1, NO: 0};
 const peril = t => (t || "").split("+").map(x => ({extreme_rain: "Heavy rain", unseasonal_rain: "Unseasonal rain", cyclone: "Cyclone"})[x] || x).join(" + ");
 const cyc = c => c ? "Cyclone " + c.split(":")[0].replace("UNNAMED", "(unnamed)") : "";
 const IMG = n => (D.img || {})[n] || "";
-const TITLES = {ov: "Overview", lv: "Live event: Cyclone Arnab", ev: "Disasters & relief (Lane 2)", se: "Drought seasons", tr: "Insurance product (Lane 1)", fp: "Farmer payouts (Lane 1)", al: "Farmer alerts", ph: "Photo verification", va: "Validation & limits"};
+const TITLES = {ov: "Overview", lv: "Live event: Cyclone Arnab", ev: "Disasters & relief (Lane 2)", se: "Drought seasons", tr: "Insurance product (Lane 1)", fp: "Farmer payouts (Lane 1)", cp: "Compensation workflow", al: "Farmer alerts", ph: "Photo verification", va: "Validation & limits"};
 
 function go(t) {
   $$("#tabs button").forEach(x => x.classList.toggle("on", x.dataset.t === t));
@@ -760,26 +842,28 @@ if (LV) {
   const E = LV.event, R = LV.rows, C = LV.counts, P = LV.preregistered;
   const radarRow = R.find(r => r.radar_mapped), H = radarRow ? radarRow.hours_after_landfall : null;
   const rainOnly = R.filter(r => r.rain_side_pct > 0);
-  $("#lvGen").textContent = `Run ${LV.generated} IST · contract and methods frozen before the storm`;
+  const FIN = !!LV.era5_complete, RSRC = FIN ? "ERA5" : "ECMWF IFS";
+  const spread = Math.max(...R.filter(r => r.models_max).map(r => r.models_max - r.models_min));
+  const noPass = R.filter(r => !r.radar_mapped && r.lane2_action !== "MONITOR");
+  $("#lvGen").textContent = `Run ${LV.generated} IST · same code as the back-tests`;
   $("#lvTitle").textContent = `${E.name}: what the system did, hour by hour`;
-  $("#lvCap").innerHTML = `${esc(E.category)}. ${esc(E.landfall)}. The same code that produced the back-tests was run on the storm as it happened; nothing was tuned to it. ${P ? `Predictions were committed to git (<b>${esc(P.commit)}</b>, ${esc(P.time)} IST) before the radar result was computed.` : ""}`;
+  $("#lvCap").innerHTML = `${esc(E.category)}. ${esc(E.landfall)}. The same code that produced the back-tests was run on the storm as it happened; nothing was tuned to it. Figures update as each satellite pass and ERA5 day arrives.`;
   $("#lvKpi").innerHTML = `<div><div class="big gt">${fmt(C.enumeration)}</div><span>mandals opened for relief enumeration (${fmt(C.standing_acres_enumeration)} standing acres, e-Panta 2026)</span></div>
-    <div><div class="big" style="color:var(--ver)">${fmt(C.rain_side)}</div><span>mandals above the rainfall trigger (provisional): rainfall-only cover would pay these</span></div>
+    <div><div class="big" style="color:var(--ver)">${fmt(C.rain_side)}</div><span>mandals above the rainfall trigger (${FIN ? "ERA5, final" : "provisional"}): rainfall-only cover would pay these</span></div>
     <div><div class="big" style="color:var(--ink)">${fmt(C.index_payout)}</div><span>index payouts: ${radarRow ? `radar at T+${fmt(H)} h shows no flood on standing crops above the false-alarm floor` : "radar pending"}</span></div>
-    <div><div class="big" style="color:var(--pay)">${P ? "T+" + fmt(P.hours_after_landfall) + " h" : "–"}</div><span>relief list and predictions issued (target: 72 h)</span></div>`;
+    <div><div class="big" style="color:var(--pay)">${P ? "T+" + fmt(P.hours_after_landfall) + " h" : "–"}</div><span>relief list and alerts issued (target: 72 h)</span></div>`;
   const st = (cls, when, what, txt) => `<div class="st ${cls}"><span class="tag ${cls === "done" ? "PAY" : "PEND"}">${esc(when)}</span><b>${what}</b>${txt}</div>`;
   $("#lvTl").innerHTML = [
     st("done", "28 Oct, early", "Landfall", "Near Yanam; IMD very severe cyclonic storm"),
-    st("done", "29–30 Oct", "Rain index (provisional)", `ECMWF IFS, GFS, ICON per mandal vs each mandal's own 1-in-5 level; ${fmt(C.rain_side)} mandals above`),
-    st("done", P ? P.time.slice(5) : "", "Predictions frozen", P ? `git ${esc(P.commit)}, T+${fmt(P.hours_after_landfall)} h, before radar` : ""),
-    st(radarRow ? "done" : "wait", radarRow ? radarRow.post_image_time.slice(5) + " UTC" : "pending", "Sentinel-1 radar", radarRow ? `acquired T+${fmt(H)} h, processed after the predictions were committed; orbit-matched; flood on cropland below the floor everywhere` : "next pass"),
-    st("done", "within 72 h", "Relief list + alerts", `${fmt(C.enumeration)} mandals, Telugu / English alerts, photo check open`),
-    st(LV.era5_complete ? "done" : "wait", LV.era5_complete ? "published" : "about 4 Nov", "ERA5 (contract index)", `published to ${esc(LV.era5_published_to)}; Lane 1 settles on ERA5 × radar`),
+    st("done", "29–30 Oct", "Rain index (provisional)", `ECMWF IFS, GFS, ICON per mandal vs each mandal's own 1-in-5 level, read while ERA5 was not yet published`),
+    st(radarRow ? "done" : "wait", radarRow ? radarRow.post_image_time.slice(5) + " UTC" : "pending", "Sentinel-1 radar", radarRow ? `acquired T+${fmt(H)} h; orbit-matched; flood on cropland below the floor everywhere` : "next pass"),
+    st("done", P ? "T+" + fmt(P.hours_after_landfall) + " h" : "within 72 h", "Relief list + alerts", `first list issued; ${fmt(C.enumeration)} mandals as of this run (the list grows as rainfall updates). Telugu / English alerts, photo check open`),
+    st(LV.era5_complete ? "done" : "wait", LV.era5_complete ? "published" : "about 4 Nov", "ERA5 (contract index)", FIN ? `published to ${esc(LV.era5_published_to)}; ${fmt(C.rain_side)} mandals above their 1-in-5 level; settled on ERA5 × radar` : `published to ${esc(LV.era5_published_to)}; Lane 1 settles on ERA5 × radar`),
     st("wait", "after enumeration", "Score the prediction", "Department SDRF crop-damage enumeration by mandal; any miss enters the basis-risk log")].join("");
-  $("#lvTblCap").innerHTML = `Mandals opened for relief, plus all pilot mandals. Rain = maximum 3-day total in ${esc(LV.window[0])} to ${esc(LV.window[1])}. ERA5 is the contract index but is published to ${esc(LV.era5_published_to)} only, so the rainfall side is <b>provisional</b> (ECMWF IFS, the model ERA5 is built from, read against the ERA5 levels). Radar = flooded share of WorldCover cropland, frozen method, vs the mandal's dry-date false-alarm floor.`;
-  $("#lvTbl").innerHTML = "<tr><th>District</th><th>Mandal</th><th class='n'>Standing acres</th><th class='n'>ECMWF 3-day mm</th><th class='n'>Model range</th><th class='n'>Trigger (1-in-5)</th><th class='n'>Rain side</th><th class='n'>Radar flood</th><th class='n'>Floor</th><th>Insurance (Lane 1)</th><th>Relief (Lane 2)</th><th>Expected loss</th></tr>" +
+  $("#lvTblCap").innerHTML = `Mandals opened for relief, plus all pilot mandals. Rain = maximum 3-day total in ${esc(LV.window[0])} to ${esc(LV.window[1])}. ${FIN ? `Source: <b>ERA5, the contract index (final)</b>, published to ${esc(LV.era5_published_to)}. Forecast range = the three forecast models (ECMWF IFS, GFS, ICON) read during the event.` : `ERA5 is the contract index but is published to ${esc(LV.era5_published_to)} only, so the rainfall side is <b>provisional</b> (ECMWF IFS, the model ERA5 is built from, read against the ERA5 levels).`} Radar = flooded share of WorldCover cropland, frozen method, vs the mandal's dry-date false-alarm floor.`;
+  $("#lvTbl").innerHTML = "<tr><th>District</th><th>Mandal</th><th class='n'>Standing acres</th><th class='n'>" + RSRC + " 3-day mm</th><th class='n'>Forecast range</th><th class='n'>Trigger (1-in-5)</th><th class='n'>Rain side</th><th class='n'>Radar flood</th><th class='n'>Floor</th><th>Insurance (Lane 1)</th><th>Relief (Lane 2)</th><th>Expected loss</th></tr>" +
     R.slice().sort((a, b) => (b.rain_side_pct - a.rain_side_pct) || ((b.lane2_action !== "MONITOR") - (a.lane2_action !== "MONITOR")) || (b.index_mm - a.index_mm)).map(r => `<tr class="${r.rain_side_pct > 0 ? "hl" : ""}"><td>${esc(r.district.replace("Parvathipuram ", ""))}</td><td><b>${esc(r.adm3_name)}</b>${r.pilot ? ' <span class="note">pilot</span>' : ""}</td><td class="n">${fmt(r.standing_acres)}</td>
-      <td class="n">${fmt(r.ecmwf_ifs025_3day_mm)}</td><td class="n note">${fmt(r.models_min)}–${fmt(r.models_max)}</td><td class="n">${fmt(r.L5)}</td>
+      <td class="n">${fmt(FIN ? r.index_mm : r.ecmwf_ifs025_3day_mm)}</td><td class="n note">${fmt(r.models_min)}–${fmt(r.models_max)}</td><td class="n">${fmt(r.L5)}</td>
       <td class="n">${r.rain_side_pct > 0 ? "<b>" + fmt(r.rain_side_pct, 1) + "%</b>" : "0"}</td>
       <td class="n">${r.radar_mapped ? fmt(r.flood_share_pct, 2) + "%" : "<span class='note' title='no post-event Sentinel-1 pass yet'>none yet</span>"}</td><td class="n note">${fmt(r.sar_floor_pct, 1)}%</td>
       <td>${r.lane1_decision.startsWith("INDEX PAYOUT") ? `<span class="tag PAY">Pays ${fmt(r.lane1_payout_pct, 1)}%</span>` : r.lane1_decision === "AWAITING RADAR" ? '<span class="tag PEND">Awaiting radar</span>' : r.rain_side_pct > 0 ? '<span class="tag NO">Held: radar does not confirm</span>' : '<span class="tag NO">No payout</span>'}</td>
@@ -788,15 +872,137 @@ if (LV) {
   $("#lvRead").innerHTML = [
     `<b>The dual trigger held.</b> On rainfall alone, ${fmt(rainOnly.length)} Manyam mandals would pay ${fmt(Math.min(...rainOnly.map(r => r.rain_side_pct)), 0)}–${fmt(Math.max(...rainOnly.map(r => r.rain_side_pct)), 0)}% of sum insured. The radar index ${radarRow ? `(T+${fmt(H)} h) found no flood on standing crops above the measured floor` : "is pending"}, so the insurance lane holds. That is the behaviour that cut false season payouts from 20 to 0 on CCE.`,
     `<b>Relief did not wait for insurance.</b> All ${fmt(C.enumeration)} mandals with a heavy-rain signal were opened for photo / AEO enumeration inside 72 hours, with alerts in Telugu and English. Photos are checked for quality, geotag and crop before an officer sees them.`,
-    `<b>Consistent with the first official figures, not yet scored.</b> Preliminary reports (Deccan Chronicle, 28 Oct) put the heaviest crop loss in the Godavari delta, mostly submerged paddy: West Godavari 76,176 ha, Konaseema 44,232, Kakinada 42,222, East Godavari 29,866, Krishna 22,339. Manyam is not among them. The prediction is scored only when the Department's mandal-level enumeration is available.`,
+    `<b>Consistent with the official figures, not yet scored.</b> The Chief Minister's statement (as reported by Deccan Chronicle) puts crops on 3,33,268 ha in 16 districts, the heaviest in the Godavari delta, mostly submerged paddy: West Godavari 76,752 ha, Kakinada 52,253, East Godavari 49,959, Konaseema 46,845, Krishna 44,836. Parvathipuram Manyam is not among the named districts. Our prediction is scored only when the Department's mandal-level enumeration is available.`,
     `<b>The basis-risk log has its next test.</b> If enumeration finds wind-lodged paddy in Manyam that the flood index cannot see, those farmers are covered by relief, and the case is logged. A lodging index can enter the contract only by passing the qualification gate between seasons, never mid-event.`].map(t => `<li>${t}</li>`).join("");
   $("#lvLim").innerHTML = [
-    `ERA5, the contract index, is published only to ${esc(LV.era5_published_to)}. The rainfall side is provisional and the three operational models disagree by up to ${fmt(Math.max(...R.filter(r => r.models_max).map(r => r.models_max - r.models_min)))} mm in one mandal.`,
+    FIN ? `ERA5 arrived about 6 days after the storm, so Lane 1 could only settle then; during the event the three forecast models disagreed by up to ${fmt(spread)} mm in one mandal, which is why settlement never runs on a forecast. ERA5 at a mandal centroid (0.25°) also smooths convective peaks.` : `ERA5, the contract index, is published only to ${esc(LV.era5_published_to)}. The rainfall side is provisional and the three operational models disagree by up to ${fmt(spread)} mm in one mandal.`,
     `Radar sees standing water, not wind lodging. By T+${fmt(H || 0)} h water may already have drained from sloping Manyam fields.`,
-    `The Godavari delta, where the reported damage is, lies outside the POC districts. Its next Sentinel-1 pass is 4 Nov (12-day revisit), after the demo. This is the revisit limit we state for every event.`,
-    `Palnadu had no post-event radar pass by this run.`,
+    `The Godavari delta, where the reported damage is, lies outside the POC districts. It was next imaged by Sentinel-1 on 4 Nov, about 7 days after landfall (12-day revisit on that orbit): the revisit limit we state for every event.`,
+    noPass.length ? `${fmt(noPass.length)} of the mandals opened for relief had no usable post-event radar pass in this run (${esc([...new Set(noPass.map(r => r.district.replace("Parvathipuram ", "")))].join(", "))}): relief there rests on rainfall and photos.` : `Every mandal opened for relief had a usable post-event radar pass.`,
     `Manyam has no cadastral polygons, so assessment is at mandal and village level, and expected loss is calibrated on YSR.`].map(t => `<li>${t}</li>`).join("");
 }
+
+// compensation workflow (p26 + backend /poc/compensation)
+const CP0 = D.comp;
+if (CP0) {
+  const cr = v => v == null ? "–" : "₹" + fmt(v / 1e7, 1) + " cr";
+  const crN = v => v == null ? "–" : fmt(v / 1e7, 1) + " cr";
+  const flow = st => st.map(x => `<b>${esc(x)}</b>`).join(" → ");
+  const stTag = st => `<span class="tag ${/PAID|SANCTIONED|APPROVED|SENT/.test(st) ? "PAY" : /VERIFIED|EVIDENCE/.test(st) ? "VER" : /CLOSED/.test(st) ? "NO" : "PEND"}">${esc(st)}</span>`;
+  $("#cpL2Flow").innerHTML = flow(CP0.lane2_states.slice(0, 5)) + ` <span>or</span> <b>${esc(CP0.lane2_states[5])}</b>`;
+  $("#cpL1Flow").innerHTML = flow(CP0.lane1_states);
+  function renderComp(C, live) {
+    const N = C.norms, L2 = C.lane2, T = L2.totals, cal = C.calibration;
+    $("#cpCap").innerHTML = `Lane 1 pays on the index; Lane 2 pays relief after the AEO confirms ≥${N.threshold_pct}% loss. Every step is recorded by officer role, with a hash chain over the log. Rates: ${esc(N.source)}: ₹${fmt(N.rainfed_per_ha)}/ha rainfed, ₹${fmt(N.irrigated_per_ha)}/ha assured irrigation, ceiling ${N.ceiling_ha} ha per farmer. ${esc(N.pmfby_note)}`;
+    $("#cpKpi").innerHTML = `<div><div class="big gt">${fmt(T.cases)}</div><span>relief cases opened (${esc(L2.event.name)})</span></div>
+      <div><div class="big" style="color:var(--ver)">${cr(T.budget_rs[1])}–${crN(T.budget_rs[2])}</div><span>relief budget estimate, rainfed–irrigated rate (CI ${cr(T.budget_rs[0])}–${crN(T.budget_rs[3])})</span></div>
+      <div><div class="big gt">${fmt(C.lane1_batches.reduce((s, b) => s + b.lines, 0))}</div><span>insurance settlement lines (bookings) in ${fmt(C.lane1_batches.length)} batch(es)</span></div>
+      <div><div class="big" style="color:var(--ink)">${C.log ? (C.log.chain_intact ? "✓" : "✗") : "–"}</div><span>${C.log ? `audit log intact (${fmt(C.log.entries)} actions)` : "audit log: open through the backend"}</span></div>`;
+    $("#cpL2Title").textContent = `Relief cases · ${L2.event.name}`;
+    $("#cpL2Cap").innerHTML = `Budget = standing acres (e-Panta 2026) × share of acute-trigger mandal-years with CCE loss ≥33% (${fmt(100 * cal.share_33)}%, Wilson CI ${fmt(100 * cal.ci[0])}–${fmt(100 * cal.ci[1])}%, ${esc(cal.source)}, n=${cal.n}) × rate. It sizes the SDRF memorandum; payment needs the AEO's verified hectares.`;
+    const act = (id, a, label) => live ? `<button class="btn s x" data-cp="${esc(id)}" data-a="${a}">${label}</button>` : "";
+    $("#cpL2").innerHTML = "<tr><th>Mandal</th><th>District</th><th class='n'>Standing acres</th><th class='n'>3-day rain mm</th><th class='n'>Photos (accepted)</th><th class='n'>Budget estimate</th><th>Status</th><th class='n'>Verified ha</th><th class='n'>Sanctioned</th><th>Next step</th></tr>" +
+      L2.cases.map(k => {
+        const v = k.verified, st = k.state || "OPENED";
+        const next = /OPENED|EVIDENCE/.test(st) ? act(k.case_id, "verify", "AEO verify ≥33%") + " " + act(k.case_id, "close", "Below 33%") : st.startsWith("AEO") ? act(k.case_id, "sanction", "Sanction") : st === "SANCTIONED" ? act(k.case_id, "paid", "Mark paid") : "";
+        return `<tr class="${st !== "OPENED" ? "hl" : ""}"><td><b>${esc(k.mandal)}</b></td><td>${esc(k.district.split(" ")[0])}</td><td class="n">${fmt(k.standing_acres)}</td><td class="n">${fmt(k.rain_mm)}</td>
+        <td class="n">${k.evidence ? fmt(k.evidence.photos) + " (" + fmt(k.evidence.accepted) + ")" : "–"}</td><td class="n note">${cr(k.budget_rs[1])}–${crN(k.budget_rs[2])}</td>
+        <td>${stTag(st)}</td><td class="n">${v ? fmt(v.rainfed_ha + v.irrigated_ha, 1) : "–"}</td><td class="n">${k.sanctioned_rs != null ? "₹" + fmt(k.sanctioned_rs) : "–"}</td><td style="white-space:nowrap">${next}</td></tr>`;
+      }).join("");
+    $("#cpL2Note").innerHTML = `Not applied, because the e-Panta extracts carry no farmer ID: the ${N.ceiling_ha} ha per-farmer ceiling and the ₹${fmt(N.min_rainfed)} / ₹${fmt(N.min_irrigated)} minimum. Irrigation source is unknown in Manyam and Palnadu, so the budget shows both rates. The calibration is from YSR Kadapa, and ${fmt(100 * cal.share_33_none)}% of mandal-years with no trigger also reach 33%: the estimate is a planning range, not a list of who is paid.`;
+    const si = C.sum_insured;
+    $("#cpL1Cap").innerHTML = `One batch per mandal × season from the per-booking payouts. Line = e-Panta booking (survey × crop) with its index evidence; no farmer names. Amount = payout % × sum insured × acres. ${si.supplied ? "Sum insured from " + esc(si.file) + "." : `<b>Sum insured is not supplied yet</b> (${esc(si.note)}), so batches are in sum-insured acres (acres × payout %); enter the notified rate in ${esc(si.file)} and re-run p26 to get rupees.`} Approval is refused if the batch file's SHA-256 changed after calculation.`;
+    $("#cpL1").innerHTML = "<tr><th>Batch</th><th>Mandal</th><th class='n'>Season</th><th class='n'>Lines</th><th class='n'>Acres</th><th class='n'>Mean payout</th><th class='n'>Sum-insured acres</th><th class='n'>Amount</th><th>File</th><th>Status</th><th>Next step</th></tr>" +
+      C.lane1_batches.map(b => {
+        const st = b.state || "CALCULATED";
+        const next = st === "CALCULATED" ? act(b.batch_id, "approve", "Approve") : st === "APPROVED" ? act(b.batch_id, "send", "Send to insurer") : st === "SENT TO INSURER" ? act(b.batch_id, "paid", "Mark paid") : "";
+        return `<tr><td><b>${esc(b.batch_id)}</b></td><td>${esc(b.mandal)}</td><td class="n">K${b.year}</td><td class="n">${fmt(b.lines)}</td><td class="n">${fmt(b.acres)}</td><td class="n">${fmt(b.mean_pct, 1)}%</td><td class="n"><b>${fmt(b.si_acres)}</b></td><td class="n">${b.amount_rs != null ? "₹" + fmt(b.amount_rs) : "<span class='note'>needs sum insured</span>"}</td>
+        <td class="note">${live ? `<a href="${API}/api/v1/poc/compensation/batch/${esc(b.batch_id)}.csv" style="color:var(--pend)">CSV</a> · ` : ""}sha256 ${esc(b.sha256.slice(0, 10))}… ${b.file_intact === false ? "<span style='color:var(--bad)'>changed</span>" : b.file_intact ? "✓" : ""}</td><td>${stTag(st)}</td><td>${next}</td></tr>`;
+      }).join("");
+    $("#cpL1Note").innerHTML = `Drivers: ${C.lane1_batches.map(b => `${esc(b.batch_id)}: ${Object.entries(b.drivers).map(([k, v]) => fmt(v) + " " + esc(k)).join(", ")}`).join("; ")}. Of the settled pilot mandal-seasons (K2023–25), only Gurazala 2023 paid: rainfall trigger AND VCI &lt; 35.`;
+    const hist = [...C.lane1_batches, ...L2.cases].flatMap(x => x.history || []).sort((a, b) => b.time.localeCompare(a.time));
+    $("#cpLogCap").innerHTML = live ? `Append-only; each entry stores the SHA-256 of the previous one, so an edited or deleted line breaks the chain (${C.log.chain_intact ? "intact" : "<b style='color:var(--bad)'>broken</b>"}).` : "Open through the backend (http://127.0.0.1:8010/poc/) to record and see workflow actions.";
+    $("#cpLog").innerHTML = hist.length ? "<tr><th>Time</th><th>Case</th><th>Step</th><th>Officer (role)</th><th>Detail</th><th>Hash</th></tr>" + hist.slice(0, 30).map(e => {
+      const d = e.data || {};
+      const det = d.basis || (d.rainfed_ha != null ? `${d.rainfed_ha} ha rainfed + ${d.irrigated_ha} ha irrigated` : d.sha256 ? "file " + d.sha256.slice(0, 10) + "…" : "");
+      return `<tr><td class="note">${esc(e.time.replace("T", " "))}</td><td>${esc(e.case_id)}</td><td>${esc(e.from_state)} → <b>${esc(e.state)}</b></td><td>${esc(e.officer_role)}</td><td class="note">${esc(det)}${e.note ? " · " + esc(e.note) : ""}</td><td class="note">${esc(e.hash.slice(0, 10))}…</td></tr>`;
+    }).join("") : "<tr><td class='note'>No actions recorded yet.</td></tr>";
+    $$("[data-cp]").forEach(btn => btn.onclick = () => cpAction(btn.dataset.cp, btn.dataset.a));
+  }
+  async function cpLoad() {
+    try { const j = await (await fetch(`${API}/api/v1/poc/compensation`)).json(); if (!j.success) throw 0; renderComp(j.data, true); $("#cpOffline").textContent = ""; }
+    catch (e) { renderComp(CP0, false); $("#cpOffline").textContent = "Backend not reachable: showing the calculated state only."; }
+  }
+  async function cpAction(id, a) {
+    const k = CP0.lane2.cases.find(x => x.case_id === id) || {};
+    const role = prompt("Officer role (no personal names)", k.mandal ? `AEO ${k.mandal}` : "Crop Insurance Section");
+    if (!role) return;
+    const body = {case_id: id, action: a, officer_role: role};
+    if (a === "verify") {
+      const rf = prompt(`${k.mandal}: hectares verified at ≥33% loss, RAINFED (standing crop ${fmt(k.standing_acres * 0.404686)} ha)`, "0");
+      if (rf === null) return;
+      const ir = prompt(`${k.mandal}: hectares verified at ≥33% loss, ASSURED IRRIGATION`, "0");
+      if (ir === null) return;
+      body.rainfed_ha = parseFloat(rf) || 0; body.irrigated_ha = parseFloat(ir) || 0;
+    }
+    const note = prompt("Note (optional)", "");
+    if (note) body.note = note;
+    const r = await fetch(`${API}/api/v1/poc/compensation/action`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+    const j = await r.json();
+    if (!r.ok) alert(j.detail || "Refused");
+    cpLoad();
+  }
+  if (API === null) { renderComp(CP0, false); $("#cpOffline").textContent = "Open through the backend (http://127.0.0.1:8010/poc/) to record approvals, verifications and sanctions."; }
+  else cpLoad();
+  $$('#tabs button[data-t="cp"]').forEach(b => b.addEventListener("click", () => { if (API !== null) cpLoad(); }));
+}
+
+// premium layer: count-up numbers when a tab opens, rotating live status (look only; final text is always the real value)
+(() => {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const RX = /^(\D*?)(\d{1,3}(?:,\d{2,3})*(?:\.\d+)?|\d+(?:\.\d+)?)(\D*)$/;
+  function countUp(root) {
+    if (reduce) return;
+    root.querySelectorAll(".big, .kpi .v, .metric b").forEach(el => {
+      if (el.children.length) return;
+      const fin = el.dataset.final || el.textContent.trim();
+      const m = fin.match(RX);
+      if (!m) return;
+      el.dataset.final = fin;
+      const target = parseFloat(m[2].replace(/,/g, "")), dec = (m[2].split(".")[1] || "").length, indian = m[2].includes(",");
+      if (!isFinite(target) || target === 0) return;
+      const t0 = performance.now(), dur = 900;
+      const step = t => {
+        const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3), v = target * e;
+        el.textContent = k < 1 ? m[1] + (indian ? v.toLocaleString("en-IN", {maximumFractionDigits: dec, minimumFractionDigits: dec}) : v.toFixed(dec)) + m[3] : fin;
+        if (k < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+      setTimeout(() => { el.textContent = fin; }, dur + 250);  // always land on the real value, even if frames are throttled
+    });
+  }
+  const obs = new MutationObserver(ms => ms.forEach(m => { if (m.target.classList.contains("show")) countUp(m.target); }));
+  document.querySelectorAll("main section, .main section").forEach(s => obs.observe(s, {attributes: true, attributeFilter: ["class"]}));
+  setTimeout(() => countUp(document.querySelector("section.show") || document), 150);
+
+  // rotating headline facts in the status pill, all read from the built data
+  const lt = document.getElementById("liveTxt");
+  if (!lt || typeof D === "undefined") return;
+  const L = D.live, facts = ["<b>Kharif 2026</b> · live season"];
+  if (L) {
+    const c = L.counts;
+    facts.push(`<b>LIVE</b> · ${L.event.name} · rain index ${L.era5_complete ? "ERA5 final" : "provisional"}`,
+      `<b>${c.enumeration}</b> mandals in relief enumeration`, `<b>${c.index_payout}</b> index payouts · radar does not confirm`);
+  }
+  if (D.comp) facts.push(`<b>${D.comp.lane2.totals.cases}</b> SDRF relief cases open`);
+  let i = 0;
+  lt.innerHTML = facts[0];
+  if (reduce || facts.length < 2) return;
+  setInterval(() => {
+    lt.classList.add("out");
+    setTimeout(() => { i = (i + 1) % facts.length; lt.innerHTML = facts[i]; lt.classList.remove("out"); }, 400);
+  }, 4200);
+})();
 </script>
 </body>
 </html>

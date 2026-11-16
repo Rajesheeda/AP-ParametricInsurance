@@ -5,7 +5,9 @@ basis-risk log. They NEVER change a Lane 1 insurance payout, which is decided by
 
 Checks, each reported separately:
   0. quality     - blur / exposure / resolution gate, thresholds measured on Department field photos (quality.py)
-  1. geotag      - GPS from EXIF (manual coordinates accepted but marked lower trust)
+  1. geotag      - GPS from EXIF, or the phone's GPS read by the capture page at the moment of capture (browsers on
+                   Android strip EXIF location from uploads) when its accuracy is within the median YSR parcel's
+                   equivalent radius (measured from APAIMS cadastral); manual coordinates accepted but lower trust
   2. location    - pilot-district mandal (geoBoundaries ADM3); in YSR Kadapa the APAIMS cadastral parcel
   3. survey      - parcel survey number matches the claimed one (when claimed)
   4. booked crop - e-Panta crop(s) booked on that parcel for the season of the photo
@@ -22,6 +24,7 @@ from functools import lru_cache
 from pathlib import Path
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 from PIL import Image
 from shapely.geometry import Point
@@ -72,6 +75,15 @@ def layers():
     return m, cad, ep, events, assess
 
 
+@lru_cache(maxsize=1)
+def gps_accuracy_limit_m():
+    """Equivalent radius of the median YSR cadastral parcel (m): a device fix less precise than this cannot place
+    the photo in one parcel."""
+    cad = layers()[1]
+    a = cad.geometry.to_crs(32644).area.median()
+    return float(np.sqrt(a / np.pi))
+
+
 def _dms(v):
     d, mi, s = (float(x) for x in v)
     return d + mi / 60 + s / 3600
@@ -111,7 +123,7 @@ def crop_matches(seen, booked):
 
 
 def verify(image_bytes, claimed_crop=None, claimed_survey=None, lat=None, lon=None, event_id=None,
-           taken=None, vision=None):
+           taken=None, vision=None, gps_source=None, gps_accuracy_m=None):
     """vision: callable(image_bytes, crop) -> dict (the backend's assess_photo). None skips the vision step."""
     m, cad, ep, events, assess = layers()
     checks, ctx = [], {}
@@ -124,15 +136,22 @@ def verify(image_bytes, claimed_crop=None, claimed_survey=None, lat=None, lon=No
                        note="limits = percentiles of the Department's own field photos"))
 
     # 1. geotag
+    dev_note = None
     if ex["lat"] is not None:
         lat, lon, src = ex["lat"], ex["lon"], "EXIF"
+    elif lat is not None and lon is not None and gps_source == "device" and gps_accuracy_m is not None:
+        lim = gps_accuracy_limit_m()
+        src = "device" if gps_accuracy_m <= lim else "manual"
+        dev_note = (f"phone GPS at capture, accuracy {gps_accuracy_m:.0f} m (limit {lim:.0f} m = median parcel radius)"
+                    + ("" if src == "device" else ": too coarse to place the photo in one parcel, treated as manual"))
     elif lat is not None and lon is not None:
         src = "manual"
     else:
         src = None
-    checks.append(dict(check="geotag", ok=src == "EXIF",
+    checks.append(dict(check="geotag", ok=src in ("EXIF", "device"),
                        detail=f"{src} {lat:.5f}, {lon:.5f}" if src else "no GPS in photo and none entered",
-                       note=None if src == "EXIF" else "manual coordinates: lower trust" if src else None))
+                       note=dev_note if dev_note
+                       else None if src == "EXIF" else "manual coordinates: lower trust" if src else None))
     taken = ex["taken"] or (pd.Timestamp(taken).to_pydatetime() if taken else None)
 
     # 2. location
@@ -183,7 +202,10 @@ def verify(image_bytes, claimed_crop=None, claimed_survey=None, lat=None, lon=No
     expect = claimed_crop or (booked[0] if booked else None)
     # Blind identification: the model is NOT told the claimed / booked crop, otherwise it tends to echo it
     # (a plain green image was reported as "Paddy, healthy, 0.96" when the prompt named Paddy).
-    vis = vision(image_bytes, "Unknown (identify it from the photo)") if vision else None
+    # a photo refused by the quality gate is not analysed: no crop, damage or pest reading from an unusable image
+    vis = vision(image_bytes, "Unknown (identify it from the photo)") if vision and q["ok"] else None
+    if vision and not q["ok"]:
+        checks.append(dict(check="vision model", ok=None, detail="not run: photo refused by the quality gate"))
     if vis and (vis.get("fallback_used") == "rule_based" or "fallback" in str(vis.get("analysis_source", "")).lower()):
         # the demo engine's rule-based fallback echoes the expected crop and a fixed damage value: never evidence
         checks.append(dict(check="vision model", ok=None, detail="vision service unavailable: no image analysis was done"))
@@ -195,8 +217,9 @@ def verify(image_bytes, claimed_crop=None, claimed_survey=None, lat=None, lon=No
         checks.append(dict(check="vision model", ok=True, detail=f"{vis.get('crop_identified')} · {vis.get('damage_class')} · "
                            f"confidence {vis.get('confidence_score', 0):.2f} · photo loss estimate "
                            f"{vis.get('estimated_photo_loss_pct', '–')}% · {vis.get('analysis_source')}",
-                           note="damage class, confidence and loss % are a general vision model's estimate: no damage-severity "
-                                "labels exist to validate them, so the officer confirms the >= 33% SDRF threshold"))
+                           note="general vision model, measured on 218 Department photos of diseased paddy / cotton: "
+                                "called 90% of them damaged (CI 85-93%); its false-alarm rate on healthy crop and its loss % "
+                                "are unmeasured (no healthy or severity labels exist), so the officer confirms the >= 33% SDRF line"))
         target = booked or ([claimed_crop] if claimed_crop else [])
         if target:
             match = any(crop_matches(vis.get("crop_identified"), c) for c in target)
@@ -222,7 +245,7 @@ def verify(image_bytes, claimed_crop=None, claimed_survey=None, lat=None, lon=No
         verdict = "CHECKS PASSED: VISION UNAVAILABLE, FIELD VISIT" if vision_down else "CHECKS PASSED: VISION PENDING"
     elif vis.get("damage_class") in ("Partially Damaged", "Severely Damaged"):
         # typed-in coordinates can be copied from any parcel, so they cannot confirm a loss on their own
-        verdict = "PHOTO CONFIRMS LOSS" if src == "EXIF" else "PHOTO SHOWS DAMAGE: MANUAL GPS, OFFICER TO VERIFY"
+        verdict = "PHOTO CONFIRMS LOSS" if src in ("EXIF", "device") else "PHOTO SHOWS DAMAGE: MANUAL GPS, OFFICER TO VERIFY"
     else:
         verdict = "PHOTO DOES NOT CONFIRM LOSS"
     case = None

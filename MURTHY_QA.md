@@ -1,4 +1,4 @@
-# Demo Q&A sheet (3 Nov 2026)
+# Demo Q&A sheet (17 Nov 2026)
 
 Each answer gives a short reply, the number behind it, and the dashboard screen to open.
 Sources: `POC_REPORT.md` sections in brackets. **Rule: say the limit before he does.**
@@ -11,14 +11,13 @@ Sources: `POC_REPORT.md` sections in brackets. **Rule: say the limit before he d
 ## Cyclone Arnab (open the Live tab first)
 **30-second version:**
 - Arnab crossed the coast near Yanam early on 28 October. Our code was not touched.
-- By T+69 hours we had opened 16 mandals for relief enumeration and issued Telugu and English alerts.
-- We committed our predictions to git *before* computing the radar.
+- By T+69 hours we had opened 16 mandals for relief enumeration and issued Telugu and English alerts. The 31 Oct update of the provisional rain added 4 Palnadu mandals just above their 99th percentile (Sattenapalle 81.6 vs 80.9 mm): 20 now. Insurance is still 0.
 - On rainfall alone, 6 Manyam mandals would have paid 6–15%.
 - Sentinel-1 at T+52 hours found no flood on standing crops above each mandal's false-alarm floor, so the insurance lane held: no payout.
 - The first official figures put the damage in the Godavari delta (submerged paddy), not in Manyam. That's consistent with the radar, but not yet a score.
 
 **"So farmers in Manyam who lost crops get nothing?"**
-- They get relief enumeration, opened in 16 mandals within 72 h.
+- They get relief enumeration, opened in 16 mandals within 72 h, 20 after the 31 Oct rain update.
 - Insurance pays only what two indices agree on. If enumeration finds wind-lodged paddy that a flood index can't see, it's a basis-risk case and goes into the log.
 - A lodging index would have to pass the gate between seasons. We don't change the contract mid-event.
 
@@ -31,7 +30,7 @@ Sources: `POC_REPORT.md` sections in brackets. **Rule: say the limit before he d
 - We used ECMWF IFS because ERA5 is built from it, and we show GFS and ICON as the spread: 126–262 mm at Balijipeta. That spread is the reason we don't settle on a forecast model.
 
 **"How will you know you were right?"**
-- The scoring rule is in the committed file (`poc/ARNAB_PREREGISTRATION.md`), written before the outcome: share of damaged mandals our relief list named, and share of our payouts that went to damaged mandals.
+- The scoring rule is in `poc/ARNAB_PREREGISTRATION.md`: share of damaged mandals our relief list named, and share of our payouts that went to damaged mandals.
 - The outcome is the Department's mandal-level SDRF enumeration. That's one ask, and they produce it anyway.
 
 ---
@@ -181,8 +180,8 @@ The notified DLTC scale of finance; it is an input on the Farmer payouts screen,
 - Relief enumeration starts within 72 h.
 
 **"What does the Department get from this tomorrow?"** (Arnab)
-- A ranked list of 16 mandals for enumeration with standing acres from e-Panta, plus alerts, inside 72 hours.
-- An insurance decision that nobody can argue about, because the rule and the prediction were committed before the data.
+- A ranked list of 20 mandals for enumeration with standing acres from e-Panta, plus alerts, inside 72 hours.
+- An insurance decision from a written rule, applied the same way as in the back-tests.
 
 **"What if the farmer lost a crop and the index didn't pay?"**
 - They get Lane 2 relief enumeration (SDRF, 33% damage or more) and PMFBY area-yield where applicable.
@@ -197,3 +196,23 @@ The notified DLTC scale of finance; it is an input on the Farmer payouts screen,
 4. Irrigation is unknown for about 70% of YSR acreage.
 5. ERA5 was chosen after seeing the data and is read at the mandal centroid.
 6. Telugu alerts are machine-drafted. No pilot-mandal field photos have been collected yet.
+
+## Compensation and the phone app (added 31 Oct)
+
+**"Where is the compensation workflow? I see percentages, not money."**
+- Compensation tab. Insurance: settlement batches per mandal-season, one line per e-Panta booking with its index evidence, then approve → send to insurer → paid. The approved file is hash-locked.
+- Rupees need the notified sum insured (scale of finance). It wasn't shared and we did not invent it: the batch is in sum-insured acres until the Department fills one table.
+- Relief: each Arnab mandal is a case. AEO enters verified hectares → sanction computed from the MHA SDRF norms (₹8,500 / ₹17,000 per ha, ≥33%) → paid. Every step is logged by role with a hash chain.
+
+**"₹17–34 crore relief for Arnab: where does that come from?"**
+- Standing acres from e-Panta 2026 × 30% (share of acute-trigger mandal-years with CCE loss ≥33%, YSR, CI 17–48%) × MHA rate. Irrigation is unknown in Manyam, so rainfed and irrigated ends are both shown.
+- It is a planning number for the SDRF memorandum, not a payment list. With no trigger, 24% of mandal-years also reach 33%, so the trigger separates weakly; we say so on the screen.
+
+**"Phone GPS can be faked."**
+- Yes, and so can EXIF. A device fix counts only if its accuracy is within 51 m (the median YSR parcel radius, measured). Beyond that it is treated as manual and an officer verifies.
+- The defences are the checks that don't depend on GPS honesty (crop booked on that parcel, timing, crop seen) plus AEO sampling. A photo never moves an insurance payout.
+
+**"Is the Healthy / Partially / Severely classifier validated?"**
+- Partly. On 218 Department photos of diseased crop it called 90% damaged (CI 85–93%). Its false alarms on healthy crop and its loss % are not measured, because no healthy or severity-labelled images exist in the Department's Label Studio.
+- So it is evidence for the officer, and the officer confirms the 33% line.
+
