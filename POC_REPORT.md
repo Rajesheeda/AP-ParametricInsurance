@@ -40,7 +40,7 @@
 - Overall accuracy **96.4%** (CI 95.0–97.9): the PPT ≥80% criterion is met against an independent sensor (APSDMA maps were not shared).
 - Flood-class precision **68%** (CI 65–70); recall **9%** (CI 6–13); F1 0.16. Overall accuracy is inflated because most land is dry, as declared in advance.
 - Radar is usually right when it says flood but misses most of the water optical sees; in the paddy season MNDWI also sees water standing in growing paddy, which C-band VH under a canopy does not show as a drop.
-- Not scorable (declared rule): 8 events had no Sentinel-2 image within 1 day, 6 had no clear cropland in the scored domain (monsoon cloud).
+- Not scorable (declared rule): 15 other events had no clear Sentinel-2 image within 1 day or no clear cropland in the radar footprint (monsoon cloud); sampling of the remaining events continues.
 - Sensitivity, not adopted this season: water threshold +1 dB raises pooled F1 to 0.26; a Lee speckle filter does not help.
 - Consequence for the design: relief never depends on radar; in insurance a radar miss holds the payout and becomes a basis-risk case covered by relief.
 Tables in sections 7.4–7.13 marked *as originally run* keep the first-run values for the record; the corrected values are the ones above.
