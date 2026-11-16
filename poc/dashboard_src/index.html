@@ -7,7 +7,6 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2338bdf8'/%3E%3Cstop offset='1' stop-color='%236366f1'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='9' fill='url(%23g)'/%3E%3Ccircle cx='16' cy='16' r='5' fill='none' stroke='%23ffffff' stroke-width='3'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Noto+Sans+Telugu:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{
   --bg:#08132a;--bg2:#0d1d3d;--panel:rgba(18,30,58,.70);--panel2:rgba(22,36,68,.65);--line:rgba(125,165,230,.14);--line2:rgba(125,165,230,.24);
@@ -105,8 +104,11 @@ section.show{display:block}
 .mc .st{display:flex;gap:12px;margin-top:8px;font-size:12px;color:var(--ink2)}
 .mc .st b{font-family:var(--disp);color:var(--ink)}
 #map{height:380px;border-radius:14px;background:#0b1020}
-.leaflet-container{background:#0b1020;font-family:var(--font)}
-.leaflet-tooltip{background:#0f172a;color:#e2e8f0;border:1px solid #334155}
+#map svg{width:100%;height:520px;display:block}
+#map .dl{font:700 20px var(--font);fill:#93aad4;letter-spacing:1.5px;text-transform:uppercase}
+#map .ml{font:700 24px var(--font);fill:#f1f6ff;paint-order:stroke;stroke:#08132a;stroke-width:6px}
+#map .pm{cursor:default;transition:fill-opacity .2s}#map .pm:hover{fill-opacity:.85}
+.mapkey{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:8px}.mapkey i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 /* tags */
 .tag{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap;border:1px solid}
 .tag::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
@@ -319,7 +321,7 @@ section.show>*:nth-child(2){animation-delay:.05s}section.show>*:nth-child(3){ani
     </div>
     <div class="grid mt">
       <div class="card"><div class="eyebrow">Pilot</div><h3>Seven pilot mandals</h3><p class="cap">Chosen by a written rule: at least one qualifying event 2020–2025, ranked by focus-crop acres (e-Panta 2025); YSR also needs ≥50% parcel coverage. Images: Sentinel-2, Jan–Mar 2026.</p><div class="mgrid" id="mgrid"></div></div>
-      <div class="card"><div class="eyebrow">Map</div><h3>Where they are</h3><p class="cap">Colour = most serious outcome across 2020–2026 (green index payout, amber relief enumeration). Boundaries: geoBoundaries ADM3.</p><div id="map"></div></div>
+      <div class="card"><div class="eyebrow">Map</div><h3>Where they are</h3><p class="cap">Colour = most serious outcome across 2020–2026 (green index payout, amber relief enumeration). Grey = the other mandals of the four POC districts. Boundaries: geoBoundaries ADM3, drawn in the page (no map service, works offline).</p><div id="map"></div><div class="mapkey" id="mapKey"></div></div>
     </div>
   </section>
 
@@ -500,7 +502,6 @@ section.show>*:nth-child(2){animation-delay:.05s}section.show>*:nth-child(3){ani
 </div>
 
 <script src="data.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 const D = window.POC, $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const esc = x => String(x ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"})[c]);
@@ -522,7 +523,6 @@ function go(t) {
   $$("#tabs button").forEach(x => x.classList.toggle("on", x.dataset.t === t));
   $$("main section, .main section").forEach(s => s.classList.toggle("show", s.id === t));
   $("#ttl").textContent = TITLES[t];
-  if (t === "ov" && window._map) setTimeout(() => _map.invalidateSize(), 60);
   window.scrollTo(0, 0);
 }
 $$("#tabs button").forEach(b => b.onclick = () => go(b.dataset.t));
@@ -558,13 +558,34 @@ $("#mgrid").innerHTML = D.pilot.map(p => `<div class="mc"><div class="im"><img s
 
 // map
 const colour = {PAY: "#34d399", VER: "#fbbf24", PEND: "#60a5fa", NO: "#94a3b8"};
-try {
-  window._map = L.map("map", {scrollWheelZoom: false, attributionControl: true});
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {attribution: "© OpenStreetMap © CARTO", subdomains: "abcd"}).addTo(_map);
-  const lay = L.geoJSON(D.mandals, {style: f => { const c = colour[worst[f.properties.adm3_name]] || "#94a3b8"; return {color: c, weight: 2, fillColor: c, fillOpacity: .35}; },
-    onEachFeature: (f, l) => l.bindTooltip(`<b>${esc(f.properties.adm3_name)}</b><br>${esc(D.districts[f.properties.district_code])}`)}).addTo(_map);
-  _map.fitBounds(lay.getBounds(), {padding: [20, 20]});
-} catch (e) { $("#map").innerHTML = "<div class='note' style='padding:16px'>Map tiles need internet; everything else works offline.</div>"; }
+(function drawMap() {
+  const C = D.ctx_mandals || D.mandals, P = D.mandals, W = 760, pad = 26;
+  const polys = g => g.type === "Polygon" ? [g.coordinates] : g.coordinates;
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  C.features.forEach(f => polys(f.geometry).forEach(p => p.forEach(r => r.forEach(([x, y]) => {
+    x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }))));
+  const k = Math.cos((y0 + y1) / 2 * Math.PI / 180), sc = (W - 2 * pad) / ((x1 - x0) * k), H = Math.round((y1 - y0) * sc + 2 * pad);
+  const X = x => pad + (x - x0) * k * sc, Y = y => pad + (y1 - y) * sc;
+  const d = g => polys(g).map(p => p.map(r => "M" + r.map(([x, y]) => X(x).toFixed(1) + "," + Y(y).toFixed(1)).join("L") + "Z").join("")).join("");
+  const bbox = g => { let a = 1e9, b = -1e9, c = 1e9, e = -1e9; polys(g).forEach(p => p.forEach(r => r.forEach(([x, y]) => { a = Math.min(a, x); b = Math.max(b, x); c = Math.min(c, y); e = Math.max(e, y); }))); return [a, b, c, e]; };
+  const tint = {"11": "#1e3a5f", "22": "#243b63", "14": "#1d3557", "10": "#22385c"};
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Map of the pilot mandals in the four POC districts">`;
+  svg += C.features.map(f => `<path d="${d(f.geometry)}" fill="${tint[f.properties.district_code] || "#1e3a5f"}" fill-opacity=".55" stroke="#3b5a8a" stroke-width=".5"><title>${esc(f.properties.adm3_name)} · ${esc(D.districts[f.properties.district_code] || "")}</title></path>`).join("");
+  // district labels above each district's extent
+  const dist = {};
+  C.features.forEach(f => { const b = bbox(f.geometry), c = f.properties.district_code; const o = dist[c] || (dist[c] = [1e9, -1e9, 1e9, -1e9]);
+    o[0] = Math.min(o[0], b[0]); o[1] = Math.max(o[1], b[1]); o[2] = Math.min(o[2], b[2]); o[3] = Math.max(o[3], b[3]); });
+  svg += Object.entries(dist).map(([c, b]) => `<text class="dl" x="${X((b[0] + b[1]) / 2).toFixed(0)}" y="${(Y(b[3]) - 12).toFixed(0)}" text-anchor="middle">${esc(D.districts[c] || c)}</text>`).join("");
+  // pilot mandals, coloured by outcome, labelled left / right alternately within a district
+  const side = {};
+  svg += P.features.map(f => { const c = colour[worst[f.properties.adm3_name]] || "#94a3b8", b = bbox(f.geometry), dc = f.properties.district_code;
+    const n = side[dc] = (side[dc] || 0) + 1, right = n % 2 === 1, cy = Y((b[2] + b[3]) / 2), xe = right ? X(b[1]) + 10 : X(b[0]) - 10;
+    return `<path class="pm" d="${d(f.geometry)}" fill="${c}" fill-opacity=".6" stroke="${c}" stroke-width="1.6"><title>${esc(f.properties.adm3_name)} · ${esc(D.districts[dc] || "")}</title></path>
+      <text class="ml" x="${xe.toFixed(0)}" y="${(cy + 8).toFixed(0)}" text-anchor="${right ? "start" : "end"}">${esc(f.properties.adm3_name)}</text>`; }).join("");
+  $("#map").innerHTML = svg + "</svg>";
+  $("#map").style.height = "auto"; $("#map").style.background = "transparent";
+  $("#mapKey").innerHTML = [["PAY", "index payout"], ["VER", "relief enumeration"], ["NO", "no payout"]].map(([k2, t]) => `<span><i style="background:${colour[k2]}"></i>${t}</span>`).join("") + `<span><i style="background:#1e3a5f;border:1px solid #3b5a8a"></i>other mandals, POC districts</span>`;
+})();
 
 // before / after slider
 const floods = (D.media || {}).floods || [];

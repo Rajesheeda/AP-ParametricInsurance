@@ -36,6 +36,11 @@ geo = gpd.read_file(DERIVED / "poc_mandals.geojson")
 geo = geo[geo.adm3_id.isin(pil.adm3_id)].drop_duplicates("adm3_id")
 geo["geometry"] = geo.geometry.simplify(0.002)
 mandals = json.loads(geo[["adm3_id", "adm3_name", "district_code", "geometry"]].to_json())
+# all POC-district mandals as context for the offline SVG map (no tiles, no map library)
+ctx = gpd.read_file(DERIVED / "poc_mandals.geojson")
+ctx = ctx[ctx.ok].drop_duplicates("adm3_id")
+ctx["geometry"] = ctx.geometry.simplify(0.004)
+ctx_mandals = json.loads(ctx[["adm3_id", "adm3_name", "district_code", "geometry"]].to_json())
 
 a = pd.read_csv(DERIVED / "assessment_pilot.csv", dtype={"district_code": str})
 ev = pd.read_csv(DERIVED / "flood_events_gee3.csv", dtype={"district_code": str})
@@ -144,6 +149,7 @@ data = dict(
     districts=DIST,
     pilot=pil[["district_code", "season", "adm3_name", "adm3_id", "focus_ac", "n_events", "parcel_cov"]].to_dict("records"),
     mandals=mandals,
+    ctx_mandals=ctx_mandals,
     events=ev[["id", "district_code", "start", "end", "types", "cyclone"]].merge(fe, left_on="id", right_on="event_id", how="left").to_dict("records"),
     assessment=a.replace({np.nan: None}).to_dict("records"),
     burn=burn.to_dict("records"),
