@@ -232,7 +232,10 @@ The notified DLTC scale of finance; it is an input on the Farmer payouts screen,
 ## Coast-wide cyclone test (added 16 Nov)
 **"Did your radar find the delta damage for Arnab?"**
 - No. The declared test failed: our top three were Guntur, Srikakulam, West Godavari, against the official East Godavari, West Godavari, Krishna.
-- Why: the delta's first usable pass (4 Nov) came after Murasu's rain, so the storms can't be separated. November is Rabi land preparation, and our false-alarm floors come from Feb/Mar dates, the wrong season.
-- Fix for next season, through the gate: a seasonal floor (same weeks, non-event years). The same caveat applies to Salur's 0.6% signal.
-- Murasu's "where" passed, but Prakasam reads about 73,000 ha against 3,151 ha reported, so we don't count it as skill.
+- Why: ERA5 rain peaked in Vizianagaram / Visakhapatnam / Srikakulam (~200 mm); the delta got 80–96 mm. ERA5 wind ranks the delta districts in the damage order, so the likely loss is wind lodging of mature paddy, which radar can't see. In the delta, radar water is only 3–8% of reported damage. The delta's first image (4 Nov) came after Murasu's rain.
+- Fix for next season, through the gate: a wind trigger relative to each mandal's history; a seasonal false-alarm floor; a minimum radar margin (Salur).
+
+**"And Murasu?"**
+- Passed: Prakasam 73,451 > Guntur 19,042 > Nellore 14,496 ha.
+- Seasonal check: Prakasam 9.6% of cropland under water vs 0.9% in the same weeks of 2024, so real; Nellore 3.0% vs 7.7%, no signal ("largely escaped"). Radar caught what ERA5 rain missed at Prakasam.
 
