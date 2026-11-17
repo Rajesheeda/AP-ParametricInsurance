@@ -4,7 +4,7 @@
 **How to use this file:**
 - **Part A** explains the ideas in plain English. Read it once tonight.
 - **Part B** is the story: my approach and the 7 innovations.
-- **Part C** goes screen by screen: what is on screen, what I am proving, what I say word for word (simple English), and what it means for me.
+- **Part C** is the 10-minute script, word for word: solution → how I used the data → what is new → live proof → the two modules.
 - **Part D** is Murthy's likely questions with answers.
 - **Part E** is the morning checklist.
 
@@ -98,124 +98,89 @@ All numbers come from the 16 Nov rebuild, with the corrected radar method. Say o
 
 ---
 
-## Part C — Screen by screen (10 minutes)
+## Part C — The demo script (10 minutes): solution, data, innovation
 
-> **Format per screen:** 🖥 what is on screen · 🎯 what I am proving · 🗣 what I say (word for word) · 💡 for me (plain meaning)
+> **Rule:** solution first, data second, innovation third, proof last. No stories. Limits only when asked: the answers are in Part D.
+> **Format per screen:** 🖥 click · 🗣 what I say (word for word) · 💡 for me
 
-### 1. Opening (0:45) — no click
-🎯 Frame the problem and my core idea before any screen.
-
+### 1. The solution in one minute (1:00) — Sidebar → *Overview* (hero)
 🗣 **Say:**
-> "Good morning, sir. After a disaster, two things must happen: insurance must pay, and government relief must reach farmers who lost their crop. When the two are mixed, both become slow.
-> So I separated them into two lanes. Lane 1 is insurance: it pays by a formula on measured indices, with no claim and no field visit. Lane 2 is relief: it checks real damage within 72 hours, using radar, e-Panta, phone photos and the AEO.
-> I tested every index on the Department's own crop-cutting yields, and I will show you what failed as well. I also ran the system live on Cyclones Arnab and Murasu."
+> "Sir, I built a complete system for crop insurance and disaster relief, running on the Department's own data.
+> It does three things automatically.
+> One, after a flood or cyclone, it finds which mandals and which crops were hit within 72 hours; for drought, it tracks the whole season.
+> Two, it decides the insurance payout for every e-Panta booking, by formula, with no claim and no field visit.
+> Three, it runs the relief process: phone photo verification, AEO verification, and the SDRF sanction amount.
+> Insurance and relief are kept as two separate lanes, so insurance stays fast and objective, and relief stays fair."
 
-💡 You are saying: insurance = automatic formula; relief = field truth; I proved my indices on government yield data; I am honest about failures.
-
-### 2. Overview (1:00) — Sidebar → *Overview*
-🖥 Satellite hero; KPI tiles (7 pilot mandals, 22 disasters, 20 → 0, 6,25,401 bookings, 60%); the two-lane diagram; the map.
-🎯 Innovations 1, 2 and 4: the architecture, and why rainfall-only insurance fails.
-
-🗣 **Say** (point at the two-lane diagram):
-> "This diagram is my solution.
-> On top is Lane 1, insurance. It pays only when two independent signals agree: rainfall **and** satellite. And every farmer's crop stages start from his own sowing date in e-Panta, not one date for the whole mandal.
-> Below is Lane 2, relief. Radar maps flooding, e-Panta keeps only crops that were standing that day, and photos or the AEO confirm the damage.
-> Look at this tile: 20 to 0. In YSR Kadapa, rainfall-only cover paid 24 times, and 20 of those had no real loss in the crop-cutting yields. With the satellite check added, wrong season payouts went to zero.
-> And if I used one mandal calendar instead of each farmer's own sowing date, 1 lakh 9 thousand bookings would flip between paid and not paid."
-
-💡 "20 → 0": of 24 rainfall-only payouts, 20 went to farmers with no real loss; adding the satellite check removed those wrong season payouts.
-
-### 3. Live: Cyclone Arnab (2:20) ⭐ — Sidebar → *Live: Cyclone Arnab*
-🖥 LIVE badge; KPIs **15** relief mandals, **6** above the rain trigger, **1** index payout (Salur), **T+69 h**; the timeline cards; the mandal table; "Reading" and "Limits" cards.
-🎯 Innovation 7: the whole system worked on a real cyclone, both lanes, with my weakness stated.
-
+### 2. How I used the data (2:00) — stay on *Overview*, point at the data chips, then the two-lane diagram
 🗣 **Say:**
-> "Cyclone Arnab crossed the coast near Yanam on 28 October. I ran the same code I used for the back-tests. I did not tune anything for this storm.
-> **Relief lane first.** Within 69 hours of landfall, the relief list and the Telugu and English alerts were out. On the final rainfall data, 15 mandals in Manyam are open for enumeration, with 1.22 lakh acres of standing crop.
-> **Now the insurance lane.** If I looked at rainfall alone, 6 mandals would be paid between 22% and 80% of the sum insured. The radar confirmed only one of them, Salur, at 34.5%. The other 5 are held.
-> I want to point out a weakness myself. In Salur the radar signal was small, 0.6% of cropland, but the payout is 34.5%, because radar only confirms and rainfall sets the amount. Also, my false-alarm level comes from February and March, a different season. For next season I will test two fixes through my qualification gate: a false-alarm level from the same weeks of calm years, and a minimum radar signal.
-> I also found and fixed a bug on 14 November. My code used one radar pass for a whole district, so mandals outside that pass were read as 'no flood' instead of 'not imaged'. I fixed it before scoring and kept both the old and the new results.
-> On timing: only 5 of the 15 mandals had a radar image within 72 hours. Sentinel-1 passes here only once in 12 days. That is why relief never waits for radar."
+> "Every decision comes from real data. Here is what each source does.
+> **e-Panta**, 6.25 lakh bookings in the pilot mandals: for every survey number I know the crop, the acres and the exact sowing date. So every farmer's crop stage is calculated from his own sowing date.
+> **Cadastral maps**, 2.23 lakh parcels in YSR Kadapa: they give each parcel its boundary, so satellite readings and photo locations are checked parcel by parcel.
+> **CCE yields from the Department**, YSR Kadapa 2019 to 2025: this is the ground truth. I used it to test every index, and to calibrate how much loss each type of event causes.
+> **Sentinel-1 radar**: it sees through cyclone clouds and maps flooded standing crops, comparing the same orbit before and after the event.
+> **Sentinel-2 and MODIS**: crop condition, used as the drought check.
+> **Rainfall from ERA5, CHIRPS and GPM**, daily for every mandal for about 30 years: each mandal gets its own 1-in-5 and 1-in-25 year levels from its own history.
+> **The Department's field photos**: 982 photos set the photo quality limits, and 1,124 labelled pest images trained my pest model.
+> All of it flows through one pipeline: rain and radar trigger, e-Panta decides which crops were standing, CCE says how much loss to expect, and the result is a payout or a relief case."
 
-🗣 **Murasu (15 sec):**
-> "Cyclone Murasu, 3 November: 20 mandals in Palnadu were opened for relief, and insurance paid nothing. In Chilakaluripet the radar showed 22% of cropland flooded, but the rain stayed below the contract level. So relief pays and insurance doesn't, and the case goes into my basis-risk log. This is exactly why I keep two lanes."
+💡 This is the "how we used the data" answer they asked for. Point at each chip as you name it.
 
-💡
-- **Relief opened fast** on rainfall alone, without waiting for radar.
-- **Insurance waited** for the second index.
-- **Salur paid**, but on a weak signal. Admitting it before Murthy finds it earns credibility.
-- **"T+69 h"** = 69 hours after landfall, under the 72-hour target.
-- **Basis-risk example:** Chilakaluripet shows the two lanes disagreeing, which is exactly what the log is for.
-
-### 4. Insurance product (1:15) — Sidebar → *Insurance product*
-🖥 Term sheet; qualification-gate table (each index: payouts, real, precision CI, pass/fail); premium.
-🎯 Innovations 2 and 3: the index had to prove itself on government yields, and my own first design failed.
-
+### 3. What is new (2:00) — Sidebar → *Insurance product*
 🗣 **Say:**
-> "This is my qualification gate. In the crop-cutting data, a loss happens in 36% of mandal-years anyway. So an index enters the contract only if, even at the low end of its confidence range, it is right more often than 36%.
-> Rainfall-only cover is right 17% of the time. It fails.
-> The design I declared first, three rainfall sources plus radar, paid 17 times and only 3 were real. It also fails, and I keep that on the screen.
-> My final product paid 17 times and 14 were real losses: 82%, with a range of 59 to 94%. To be honest, 13 of those 14 come from one storm, Cyclone Nivar in 2020, and I chose this combination after seeing the data. So it will be tested again on the 2026 crop-cutting yields.
-> The premium also drops: in YSR, rainfall-only cover costs 24.9% of the sum insured; my dual-trigger cover costs 9.4%. A lower premium means a lower farmer share and a lower State subsidy."
+> "Five things in this design are new.
+> **First, a dual trigger.** Insurance pays only when rainfall and satellite both agree. Rainfall-only cover in YSR paid 24 times and 20 of those had no real loss. My product paid 17 times and 14 were real losses: 82%.
+> **Second, a qualification gate.** No index enters the contract on opinion. It must beat chance on the Department's own crop-cutting yields. This table shows every index I tested: the ones that failed are rejected automatically.
+> **Third, each farmer's own calendar.** Crop stages start from each booking's sowing date. With one mandal calendar, 1 lakh 9 thousand bookings would get the wrong answer.
+> **Fourth, e-Panta on top of radar.** Radar cannot tell a flood from a paddy field filled with water for planting. e-Panta tells us what was standing that day; in Cyclone Michaung this removed 60% of radar flags on fields with no standing crop.
+> **Fifth, the premium falls.** Because wrong payouts are removed, the YSR premium drops from 24.9% to 9.4% of the sum insured. That saves money for both the farmer and the State."
 
-💡
-- **Precision 82%** = about 8 in 10 payouts went to real losses. The range 59–94% is wide because the data is small.
-- The Nivar point is a weakness: most hits come from one storm. Saying it first protects you.
-- **Burn cost** = the average yearly payout, the "pure" premium before the insurer's margin.
+💡 Numbers to point at: 20 wrong → 0, 82% real, the pass/fail column, 24.9% → 9.4%.
 
-### 5. Photo verification — Module B (2:00) — Sidebar → *Photo verification* (live)
-🖥 Upload form; results with ✓/✗ per check; verdict; recommended interventions; the "Insurance unchanged" line.
-🎯 Requirement B: a quality-checked, location-checked photo with damage class, confidence, pest ID and interventions, which never changes insurance.
-
-🗣 **(a) Upload `2_blurry_shaken.jpg`, then say:**
-> "If a farmer sends a blurred photo, it is stopped at the first check: retake photo. Nothing else runs on a bad photo. I set these limits from 982 of the Department's own field photos: 91% of genuine photos pass, and every degraded copy is refused."
-
-🗣 **(b) Upload `1_clear_paddy_brown_plant_hopper.jpg`, then say:**
-> "Now a clear photo. Each check is shown separately: photo quality, location in Balijipeta, timing inside the cyclone window. The vision model sees paddy, severely damaged, with a confidence score and a photo loss estimate, and the crop matches the booking.
-> My trained pest model identifies brown plant hopper, a pest that spreads after floods, and gives the recommended actions from the DPPQS, ICAR and ANGRAU packages, with sources.
-> And the last line: insurance is unchanged. A photo never changes an insurance payout. Because I typed the location, it says 'manual GPS, officer to verify'.
-> The pest model was trained on Department images and scores 60% on photos it never saw, against 47% for Gemini. It is a suggestion for the officer, not a diagnosis."
-
-🗣 **Phone (10 sec):**
-> "There is also a phone page. It opens the camera and records the phone's GPS at the moment of the photo. A location counts only if it is accurate to 51 metres, which is the size of a typical parcel in YSR."
-
-💡
-- **The first photo** shows that a bad photo is rejected before anyone wastes time on it.
-- **The second** shows every check, the pest, and what the farmer should do.
-- **"Insurance unchanged"** is the two-lane rule in action.
-- **"60% on photos it never saw"** (held-out) is the honest way to measure a model.
-
-### 6. Compensation (1:20) — Sidebar → *Compensation*
-🖥 KPIs: **15** relief cases, budget **₹12.6–25.2 cr**, **13,096** settlement lines, audit ✓. Relief-case table with states; the insurance batch with its SHA-256; the audit log.
-🎯 Requirement A: the compensation workflow, from trigger to money, with official norms and an audit trail.
-
+### 4. It works live: Cyclone Arnab (1:45) — Sidebar → *Live: Cyclone Arnab*
 🗣 **Say:**
-> "This is the compensation workflow.
-> On the relief side, each of the 15 Arnab mandals is a case. It moves from opened, to evidence received when a photo arrives, to AEO verified with the hectares that lost 33% or more, to sanctioned, to paid. The sanction is calculated automatically from the MHA disaster-relief rates: 8,500 rupees per hectare rainfed and 17,000 irrigated. The budget estimate for Arnab is 12.6 to 25.2 crore. That is a planning number, not a payment list.
-> The MHA rules also say relief is reduced when insurance has already paid for the same disaster. That is exactly the link between my two lanes, and Salur is that case.
-> On the insurance side, Gurazala 2023 is one settlement batch of 13,096 bookings. The file is locked with a digital fingerprint, so the file that is approved is the file the insurer receives. To show rupees I need the notified sum insured. It wasn't shared, so I didn't invent it.
-> Every action is recorded with the officer's role, in a log that shows 'broken' if anyone edits a line."
+> "This is not a back-test. Cyclone Arnab hit on 28 October and I ran the same system on it, live.
+> Within 69 hours, it produced the relief list: 15 mandals and 1.22 lakh acres of standing crop, with Telugu and English alerts.
+> On the insurance side, rainfall alone would have paid 6 mandals up to 80% of the sum insured. The radar confirmed one, Salur, and held the other five. That is the dual trigger protecting the scheme, in a real storm.
+> I also ran Cyclone Murasu on 3 November: 20 mandals in Palnadu were opened for relief within the same process."
 
-💡
-- **The budget** is a planning estimate. Who actually gets paid is decided by the AEO's verified hectares.
-- **SHA-256** is a digital fingerprint: if anyone edits the payout file after approval, the fingerprint changes and the system refuses it.
-- (Optional live click: Balijipeta → "AEO verify ≥33%" → 120 rainfed + 30 irrigated → Sanction → ₹15,30,000. Delete `poc\data\compensation_log.jsonl` afterwards.)
+💡 Point at the four numbers on top: 15 · 6 · 1 · T+69 h.
 
-### 7. Limits + close (1:20) — Sidebar → *Validation & limits* (or no click)
-🎯 Say the limits before Murthy does, then make one clear ask.
+### 5. Module B — phone photos (1:45) — Sidebar → *Photo verification* (live)
+🗣 **(a) Upload `2_blurry_shaken.jpg`:**
+> "A farmer sends a blurred photo. It is rejected at once: retake photo. The limits come from 982 Department photos."
 
+🗣 **(b) Upload `1_clear_paddy_brown_plant_hopper.jpg`:**
+> "Now a clear photo. In one step the system checks the photo quality, the location, the timing against the cyclone, the crop against the e-Panta booking, and the damage: severely damaged, with a confidence score and a loss estimate.
+> My trained pest model identifies brown plant hopper and shows the recommended actions from ICAR, DPPQS and ANGRAU.
+> The photo goes to relief. It never changes the insurance payout.
+> The same check runs from a phone page that captures the photo with the phone's GPS."
+
+### 6. Module A — compensation workflow (1:15) — Sidebar → *Compensation*
 🗣 **Say:**
-> "Before you ask, here are my limits.
-> One: the 75% target cannot be tested with this data: one district, 7 seasons, only about 14 independent data points. It needs about 25 seasons.
-> Two: flood accuracy. The APSDMA maps were not shared, so I compared with the Sentinel-2 optical satellite. Overall accuracy is 96%, above the 80% target. But most land is dry, so the honest numbers are these: when my radar says flood, it is right 2 times in 3, but it finds only 1 in 10 of the water the optical satellite sees. That is why relief never depends on radar.
-> Three: for Arnab, my radar did not find the delta districts where the State reported the most damage. Most of that damage was wind flattening the paddy, which radar cannot see. Next season I will test a wind trigger. For Murasu the radar did find the worst district, Prakasam.
-> Four: parcel maps exist only for YSR, and irrigation is unknown for 70% of the land.
-> I have one request: the mandal-level crop-damage enumeration for Arnab and Murasu, so I can score my predictions. Thank you."
+> "Finally, the money.
+> For relief, each affected mandal is a case: opened, evidence received, verified by the AEO, sanctioned, paid. The sanction is calculated from the MHA disaster-relief norms: 8,500 rupees per hectare rainfed, 17,000 irrigated. For Arnab, the system estimates a relief budget of 12.6 to 25.2 crore.
+> For insurance, the payouts become a settlement batch for the insurer, 13,096 bookings for Gurazala 2023, locked with a digital fingerprint so it cannot be changed after approval.
+> Every step is logged with the officer's role."
 
-💡 Saying failures first is my strategy: Murthy respects honest concessions and hammers hidden flaws.
+### 7. Close (0:15)
+🗣 **Say:**
+> "So: one system, on the Department's own data, from the disaster to the payout. Insurance that pays the right farmers, and relief within 72 hours. Thank you, I'm happy to take questions."
 
 | Screen | Time |
 |---|---|
+| 1. The solution (Overview) | 1:00 |
+| 2. How I used the data (Overview) | 2:00 |
+| 3. What is new (Insurance product) | 2:00 |
+| 4. Live: Cyclone Arnab | 1:45 |
+| 5. Module B: photos (live) | 1:45 |
+| 6. Module A: compensation | 1:15 |
+| 7. Close | 0:15 |
+| **Total** | **10:00** |
+
+Short on time? Drop the Murasu sentence and the phone-page sentence. Never cut screens 2 and 3: they are what the judges asked for.
+
+---|---|
 | Opening | 0:45 |
 | Overview | 1:00 |
 | **Live: Cyclone Arnab** | 2:20 |
@@ -230,6 +195,8 @@ Short on time? Skip the Murasu lines and the phone-page line, and cut Compensati
 ---
 
 ## Part D — Questions (Murthy first), with answers
+
+> Limits and weaknesses are **not** in the talk. Give them here, only when asked: briefly, with the number, then move on.
 
 Murthy works bottom-up: satellite physics → validation → method choices → innovation.
 - Answer in 20–30 seconds.
