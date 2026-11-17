@@ -255,7 +255,7 @@ Murthy works bottom-up: satellite physics → validation → method choices → 
 
 ## Part E — Morning checklist (20 minutes before)
 
-1. Start the backend (`poc-backend`) and **wait 1 minute**.
+1. **Double-click `C:\AP-ParametricInsurance\START_DEMO.bat`.** It opens a black window "AP POC backend": **keep it open for the whole demo** (closing it stops the system, and pages then show "Failed to fetch"). After 45 seconds the dashboard opens by itself.
 2. Run the preflight; the last line must say **ALL CLEAR**:
    ```
    py -3.13 C:\AP-ParametricInsurance\poc\preflight.py
