@@ -319,6 +319,21 @@ section.show>*:nth-child(2){animation-delay:.05s}section.show>*:nth-child(3){ani
       </div></div>
       <div class="loop"><b>Basis-risk loop:</b> every case where relief sees damage the index didn't pay (or the reverse) is logged. At season end the index levels are re-tested against CCE yields; the index changes only between seasons, never during a claim.</div>
     </div>
+    <div class="card mt">
+      <div class="eyebrow">Satellite physics</div><h3>What the satellite actually sees — and how I link it to damage</h3>
+      <p class="cap">A satellite never sees crop loss. It measures physical signals. Loss (yield) is measured only by the Department's crop-cutting experiments, so I tested every signal against those yields (YSR Kadapa, 166 mandal-crop-years, loss = yield below 80% of normal).</p>
+      <div class="grid g3">
+        <div class="lane l1" style="margin-top:0"><h4>Sentinel-1 radar · <span class="pill">water</span></h4><span class="note" style="display:block;margin:0">Calm water reflects the radar beam away like a mirror, so a flooded field turns dark: a drop of 3 dB or more, same orbit before vs after. Works through cyclone cloud. It sees <b>water on the field</b>, not dead plants; one image cannot tell how long the water stayed.</span></div>
+        <div class="lane l1" style="margin-top:0"><h4>MODIS / Sentinel-2 · <span class="pill">greenness</span></h4><span class="note" style="display:block;margin:0">Healthy leaves reflect near-infrared strongly. VCI compares this season's greenness with the same place's own history (VCI &lt; 35 = stressed, Kogan). It sees <b>canopy stress</b>, not grain; clouds block it.</span></div>
+        <div class="lane l2" style="margin-top:0"><h4>e-Panta · <span class="pill">what was standing</span></h4><span class="note" style="display:block;margin:0">Crop and sowing date per survey number. Turns "water" into "water on a standing crop at this growth stage", and stops paddy fields flooded for planting from counting as a disaster.</span></div>
+      </div>
+      <div class="tbl mt"><table><tr><th>Signal</th><th class="n">When it fired, share that were real losses</th><th class="n">Share of all real losses it caught</th></tr>
+        <tr><td>Rainfall alone (today's WBCIS structure)</td><td class="n">17%</td><td class="n">7%</td></tr>
+        <tr><td>Radar water on standing crop alone</td><td class="n">49%</td><td class="n">51%</td></tr>
+        <tr><td>MODIS greenness (VCI &lt; 35) alone</td><td class="n">50% <span class="note">(6 cases)</span></td><td class="n">5%</td></tr>
+        <tr class="hl"><td><b>Two independent signals must agree (my insurance product)</b></td><td class="n"><b>82%</b></td><td class="n">24%</td></tr></table></div>
+      <div class="loop"><b>Reading:</b> no single signal is a reliable damage measure; requiring two independent ones makes a payout right about 8 times in 10. What the signals cannot see (wind-flattened paddy, pests, a short flood) goes to the relief lane, where an AEO or a photo checks the field.</div>
+    </div>
     <div class="grid mt">
       <div class="card"><div class="eyebrow">Pilot</div><h3>Seven pilot mandals</h3><p class="cap">Chosen by a written rule: at least one qualifying event 2020–2025, ranked by focus-crop acres (e-Panta 2025); YSR also needs ≥50% parcel coverage. Images: Sentinel-2, Jan–Mar 2026.</p><div class="mgrid" id="mgrid"></div></div>
       <div class="card"><div class="eyebrow">Map</div><h3>Where they are</h3><p class="cap">Colour = most serious outcome across 2020–2026 (green index payout, amber relief enumeration). Grey = the other mandals of the four POC districts. Boundaries: geoBoundaries ADM3, drawn in the page (no map service, works offline).</p><div id="map"></div><div class="mapkey" id="mapKey"></div></div>

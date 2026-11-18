@@ -122,7 +122,8 @@ All numbers come from the 16 Nov rebuild, with the corrected radar method. Say o
 > **Sentinel-2 and MODIS**: crop condition, used as the drought check.
 > **Rainfall from ERA5, CHIRPS and GPM**, daily for every mandal for about 30 years: each mandal gets its own 1-in-5 and 1-in-25 year levels from its own history.
 > **The Department's field photos**: 982 photos set the photo quality limits, and 1,124 labelled pest images trained my pest model.
-> All of it flows through one pipeline: rain and radar trigger, e-Panta decides which crops were standing, CCE says how much loss to expect, and the result is a payout or a relief case."
+> All of it flows through one pipeline: rain and radar trigger, e-Panta decides which crops were standing, CCE says how much loss to expect, and the result is a payout or a relief case.
+> *(scroll to the card "What the satellite actually sees")* One important point: a satellite never sees crop loss. Radar sees water on the field, and optical sees how green the crop is. Only the crop-cutting experiment measures loss. So I tested each signal against the Department's yields: radar alone was right about half the time, rainfall alone 17%. When two independent signals must agree, the payout is right 82% of the time. That is why my insurance needs both."
 
 💡 This is the "how we used the data" answer they asked for. Point at each chip as you name it.
 
@@ -202,6 +203,20 @@ Murthy works bottom-up: satellite physics → validation → method choices → 
 - Answer in 20–30 seconds.
 - Admit what is weak, then give the number.
 - **Never guess.** If you don't know, say "I haven't measured that; here is how I would."
+
+### D0. The one question: "How does a satellite see damage?"
+**Answer in 30 seconds (say this first, calmly):**
+> "It doesn't, sir, and I don't claim it does. A satellite measures physical signals. Sentinel-1 radar measures water: calm water reflects the beam away, so a flooded field turns dark, a drop of 3 dB or more against the same orbit before the event. Optical measures greenness against the same place's history. Damage, meaning yield loss, is measured only by the crop-cutting experiment. So I calibrated the signals against the Department's CCE yields: radar alone is right about half the time, rainfall alone 17%, and when both must agree, 82%. Insurance pays on the agreed signals, which is what parametric means; real damage on the field is checked in the relief lane by the AEO and the photo."
+
+**His follow-ups, and the short answer to each:**
+| Follow-up | Answer | 💡 For me |
+|---|---|---|
+| "Water for one day doesn't kill paddy. Radar can't tell how long it stayed." | "Correct, one image can't give duration, and duration is what kills paddy. That's exactly why radar alone is right only half the time, and why it is never the only condition for a payout." | Agree, then show why the design already handles it. |
+| "If the crop canopy is above the water, radar doesn't see the water." | "Right: then the signal is not a drop. I tested the other effect, the brightening from water under a canopy: on Budameru it was 5.4% vs 3.5% on a dry date, too weak to use at C-band. So my radar misses such water; against Sentinel-2 it finds about 1 in 10 of the water. Missed floods go to relief, not to zero." | A known physics limit; we measured it. |
+| "Greenness drops at harvest too." | "Yes. VCI compares the same weeks of the year with the same place's own past years, so a normal harvest is already in the baseline. At parcel level in YSR, I compare each parcel with parcels of the same crop and sowing week, and e-Panta's sowing date plus the crop's FAO-56 duration tells me when it was due for harvest." | The baseline already contains normal harvests. |
+| "Clouds during the cyclone?" | "Optical can't see through them; radar can. That is why radar is the flood signal and optical is used for the season and drought check." | Each sensor where it works. |
+| "Wind-flattened paddy?" | "Neither signal sees lodging reliably. For Arnab, most delta damage was wind, and my radar missed it. That case goes to relief; a wind index can enter next season only if it passes the gate." | Honest limit, with the next step. |
+| "Then what does the satellite add?" | "Two things: it removes wrong payouts (rainfall-only paid 24 times, 20 wrong; with the satellite check, wrong season payouts went to zero), and it tells the AEO which mandals to visit first." | Satellite = filter and pointer, not a damage meter. |
 
 ### D1. Satellite / radar physics
 | Question | Answer to say | 💡 For you |
