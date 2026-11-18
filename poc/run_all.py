@@ -18,6 +18,7 @@ STEPS = [
     "p13_assessment.py",         # pilot decisions, two lanes
     "p25_live_event.py",         # live event (Cyclone Arnab) with the frozen contract; radar via --radar <ee-project>
     "p23_farmer_payouts.py",     # Lane 1 per-farmer payouts on own sowing dates (YSR, Palnadu, Manyam pilots)
+    "p28_wbcis_termsheet.py",    # WBCIS-structure weather index: 6 perils x crop stages, trigger/exit, Rs claim
     "p26_compensation.py",       # settlement batches (Lane 1) and SDRF relief cases + budget range (Lane 2)
     "p24_premium_power.py",      # Lane 1 premium; how much evidence the CCE data can carry
     "p19_alerts.py",             # Telugu / English alerts

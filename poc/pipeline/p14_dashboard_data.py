@@ -133,6 +133,7 @@ data = dict(
     power=_json("evidence_power.json"),
     live=_json("live_event_arnab.json"),
     comp=_json("compensation.json"),
+    wbcis=_json("wbcis.json"),
     farmer_summary=_json("farmer_payouts_summary.json"),
     farmers=farmers,
     cat_events=pd.read_csv(cat_f).replace({np.nan: None}).to_dict("records") if cat_f.exists() else [],

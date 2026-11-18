@@ -268,10 +268,11 @@ section.show>*:nth-child(2){animation-delay:.05s}section.show>*:nth-child(3){ani
     <div><b>AP Parametric Intelligence</b><span>Disaster loss assessment · POC</span></div></div>
   <nav class="nav" id="tabs">
     <button data-t="ov" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Overview</button>
+    <button data-t="wb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><path d="M8 22v-2M12 22v-2M16 22v-2"/></svg>Weather index (WBCIS)</button>
     <button data-t="lv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 4H3M18 8H6M19 12H9M16 16h-6M11 20H9"/></svg>Live: Cyclone Arnab</button>
     <button data-t="ev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 16.6A5 5 0 0 0 18 7h-1.3A8 8 0 1 0 4 15.3"/><path d="m13 11-4 6h6l-4 6"/></svg>Disasters &amp; relief</button>
     <button data-t="se"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Drought seasons</button>
-    <button data-t="tr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>Insurance product</button>
+    <button data-t="tr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>Hybrid: weather + satellite</button>
     <button data-t="fp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Farmer payouts</button>
     <button data-t="cp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>Compensation</button>
     <button data-t="al"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Farmer alerts</button>
@@ -294,21 +295,21 @@ section.show>*:nth-child(2){animation-delay:.05s}section.show>*:nth-child(3){ani
       <div class="geo">Sentinel-2 · Krishna delta, Vijayawada · Jan–Mar 2026 composite</div>
       <div class="in">
         <div class="eyebrow">AP Agriculture · Case 100075 · Proof of concept</div>
-        <h1>Insurance pays on the index. <span class="gt">Relief checks the field.</span> Never mixed.</h1>
-        <p><b>Lane 1, insurance:</b> a pure parametric dual trigger. A rainfall index <i>and</i> a satellite crop index must both cross pre-agreed levels, and an index enters the contract only after it beats chance against the Department's own crop-cutting yields; the payout is a formula on each farmer's <i>own</i> e-Panta sowing date, with no claim and no field visit. <b>Lane 2, relief:</b> a 72-hour disaster assessment. Sentinel-1 radar maps flooded standing crops and quality-checked, parcel-locked photos feed SDRF enumeration. Where the lanes disagree, a basis-risk log recalibrates the index each season against the Department's own crop-cutting yields.</p>
-        <div class="chips"><span class="chip">e-Panta: 6.25 lakh bookings</span><span class="chip">Cadastral: 2.23 lakh parcels</span><span class="chip">CCE yields (Department)</span><span class="chip">Sentinel-1 radar</span><span class="chip">Sentinel-2 / MODIS</span><span class="chip">ERA5 · CHIRPS · GPM rainfall</span><span class="chip">IBTrACS cyclones</span><span class="chip">Department field photos</span><span class="chip">Trained pest model</span></div>
-        <div class="btns"><button class="btn p" data-go="tr">The insurance product →</button><button class="btn s" data-go="fp">Farmer payouts</button><button class="btn s" data-go="lv">Live: Cyclone Arnab</button><button class="btn s" data-go="va">How we validated</button></div>
+        <h1>Insurance pays on the weather. <span class="gt">Relief checks the field.</span> Never mixed.</h1>
+        <p><b>Lane 1, insurance:</b> a crop-stage weather index in the WBCIS structure. Six perils (deficit and excess rain, dry spell, high wind, disease-congenial humidity and temperature, heat) are insured stage by stage; each cover has a trigger and an exit set from the mandal's own 30-year weather record, and the claim in ₹ per acre is generated from weather alone, irrespective of yield. Crop stages are dated from e-Panta sowing dates. <b>Lane 2, relief:</b> a 72-hour disaster assessment. Sentinel-1 radar maps flooded standing crops, e-Panta keeps only crops standing that day, and quality-checked, parcel-locked photos and the AEO feed SDRF enumeration. Satellite and photos never change an insurance claim.</p>
+        <div class="chips"><span class="chip">e-Panta: 6.25 lakh bookings</span><span class="chip">Cadastral: 2.23 lakh parcels</span><span class="chip">AP scale of finance</span><span class="chip">CCE yields (relief calibration)</span><span class="chip">Sentinel-1 radar</span><span class="chip">Sentinel-2 / MODIS</span><span class="chip">CHIRPS rain · ERA5 wind, RH, temperature</span><span class="chip">IBTrACS cyclones</span><span class="chip">Department field photos</span><span class="chip">Trained pest model</span></div>
+        <div class="btns"><button class="btn p" data-go="wb">The weather index →</button><button class="btn s" data-go="fp">Farmer payouts</button><button class="btn s" data-go="lv">Live: Cyclone Arnab</button><button class="btn s" data-go="va">How we validated</button></div>
       </div>
     </div>
     <div class="grid g5 mt" id="kpis"></div>
     <div class="card mt">
       <div class="eyebrow">Decision engine</div><h3>Two lanes, never mixed</h3><p class="cap">Insurance is a contract on an index: it must pay the same answer whoever looks. Relief is an assessment of real damage: it must look at the field. Mixing them is how parametric schemes lose their speed and their objectivity.</p>
-      <div class="lane l1"><h4>LANE 1 · PARAMETRIC INSURANCE <span class="pill">index only · no claim · no visit</span></h4>
+      <div class="lane l1"><h4>LANE 1 · WEATHER INDEX INSURANCE <span class="pill">weather only · no claim form · no visit</span></h4>
       <div class="flow f4">
-        <div class="step"><div class="n">1</div><b>Qualified rainfall index</b><span>CHIRPS, ERA5 and GPM IMERG all tested on real CCE yields; only an index whose precision beats the base loss rate (95% bound) enters the contract</span></div>
-        <div class="step"><div class="n">2</div><b>Satellite index</b><span>Sentinel-1 flood on standing crops above the measured false-alarm level; VCI for drought. Both triggers must fire</span></div>
-        <div class="step"><div class="n">3</div><b>Farmer's own calendar</b><span>FAO-56 stages start at each booking's e-Panta sowing week, not a district calendar</span></div>
-        <div class="step"><div class="n">4</div><b>Formula payout</b><span>Linear from 1-in-5 to 1-in-25, % of sum insured × insured acres, straight to the account</span></div>
+        <div class="step"><div class="n">1</div><b>Crop stages from e-Panta</b><span>FAO-56 stages dated from the sowing date of that crop in that mandal, not a fixed calendar</span></div>
+        <div class="step"><div class="n">2</div><b>Six perils, by stage</b><span>Each stage insured only for the perils that damage it: deficit, excess, dry spell, wind, disease-congenial, heat</span></div>
+        <div class="step"><div class="n">3</div><b>Trigger and exit</b><span>1-in-5 and 1-in-25 levels from the mandal's own 1995–2024 record; detrended where the climate has a trend</span></div>
+        <div class="step"><div class="n">4</div><b>Claim in ₹ per acre</b><span>Linear between trigger and exit, AP scale of finance, × insured acres in e-Panta</span></div>
       </div></div>
       <div class="lane l2"><h4>LANE 2 · DISASTER RELIEF (SDRF) <span class="pill">72-hour assessment · field evidence</span></h4>
       <div class="flow f4">
@@ -317,10 +318,10 @@ section.show>*:nth-child(2){animation-delay:.05s}section.show>*:nth-child(3){ani
         <div class="step"><div class="n">3</div><b>Loss estimate</b><span>Median real CCE loss when this trigger type fired; ≥33% damage = SDRF eligible</span></div>
         <div class="step"><div class="n">4</div><b>Enumeration</b><span>Quality-gated geotagged photo or AEO visit, radar-flooded villages first</span></div>
       </div></div>
-      <div class="loop"><b>Basis-risk loop:</b> every case where relief sees damage the index didn't pay (or the reverse) is logged. At season end the index levels are re-tested against CCE yields; the index changes only between seasons, never during a claim.</div>
+      <div class="loop"><b>Basis-risk log:</b> every case where relief finds damage the weather index did not pay (or the reverse) is logged for the Department and the insurer to review between seasons. A term sheet never changes during a season.</div>
     </div>
     <div class="card mt">
-      <div class="eyebrow">Satellite physics</div><h3>What the satellite actually sees — and how I link it to damage</h3>
+      <div class="eyebrow">Satellite physics · relief lane and the optional hybrid add-on</div><h3>What the satellite actually sees — and how I link it to damage</h3>
       <p class="cap">A satellite never sees crop loss. It measures physical signals. Loss (yield) is measured only by the Department's crop-cutting experiments, so I tested every signal against those yields (YSR Kadapa, 166 mandal-crop-years, loss = yield below 80% of normal).</p>
       <div class="grid g3">
         <div class="lane l1" style="margin-top:0"><h4>Sentinel-1 radar · <span class="pill">water</span></h4><span class="note" style="display:block;margin:0">Calm water reflects the radar beam away like a mirror, so a flooded field turns dark: a drop of 3 dB or more, same orbit before vs after. Works through cyclone cloud. It sees <b>water on the field</b>, not dead plants; one image cannot tell how long the water stayed.</span></div>
@@ -331,7 +332,7 @@ section.show>*:nth-child(2){animation-delay:.05s}section.show>*:nth-child(3){ani
         <tr><td>Rainfall alone (today's WBCIS structure)</td><td class="n">17%</td><td class="n">7%</td></tr>
         <tr><td>Radar water on standing crop alone</td><td class="n">49%</td><td class="n">51%</td></tr>
         <tr><td>MODIS greenness (VCI &lt; 35) alone</td><td class="n">50% <span class="note">(6 cases)</span></td><td class="n">5%</td></tr>
-        <tr class="hl"><td><b>Two independent signals must agree (my insurance product)</b></td><td class="n"><b>82%</b></td><td class="n">24%</td></tr></table></div>
+        <tr class="hl"><td><b>Two independent signals must agree (optional hybrid add-on)</b></td><td class="n"><b>82%</b></td><td class="n">24%</td></tr></table></div>
       <div class="loop"><b>Reading:</b> no single signal is a reliable damage measure; requiring two independent ones makes a payout right about 8 times in 10. What the signals cannot see (wind-flattened paddy, pests, a short flood) goes to the relief lane, where an AEO or a photo checks the field.</div>
     </div>
     <div class="grid mt">
@@ -341,6 +342,30 @@ section.show>*:nth-child(2){animation-delay:.05s}section.show>*:nth-child(3){ani
   </section>
 
   <!-- LIVE EVENT -->
+  <!-- WEATHER INDEX (WBCIS) -->
+  <section id="wb">
+    <div class="card"><div class="eyebrow">Lane 1 · pure weather index · claim from weather alone</div>
+      <h3>Crop-stage weather index: six perils, trigger and exit per stage, claim in ₹ per acre</h3>
+      <p class="cap">The claim is generated automatically when a weather parameter crosses its trigger in a crop stage, <b>irrespective of yield loss</b>. No crop-cutting experiment, satellite image or photo enters the claim. Each stage is insured only for the perils it is exposed to.</p>
+      <div class="statrow" id="wbKpi"></div></div>
+    <div class="mt">
+      <div class="card"><div class="eyebrow">Index design</div><h3>Which peril is insured in which crop stage</h3><div class="tbl"><table id="wbExp"></table></div>
+        <ul class="tight" id="wbDesign"></ul></div>
+      <div class="card mt"><div class="eyebrow">Weather data source</div><h3>Where every number comes from</h3><div class="tbl"><table id="wbSrc"></table></div><div class="note" id="wbSrcNote"></div></div>
+    </div>
+    <div class="card mt"><div class="eyebrow">Term sheet</div><h3 id="wbTsTitle">Term sheet</h3>
+      <div class="si"><select id="wbM"></select><select id="wbC"></select></div>
+      <p class="cap" id="wbTsCap"></p><div class="tbl"><table id="wbTs"></table></div></div>
+    <div class="card mt"><div class="eyebrow">Claim calculator</div><h3 id="wbClTitle">Claim for a season</h3>
+      <div class="si"><select id="wbY"></select></div>
+      <div class="statrow" id="wbClKpi"></div><div class="tbl"><table id="wbCl"></table></div><div class="note" id="wbClNote"></div></div>
+    <div class="grid g2 mt">
+      <div class="card"><div class="eyebrow">Premium · pure burn cost 1995–2024</div><h3>What this term sheet costs</h3><div class="tbl"><table id="wbBurn"></table></div><div class="note" id="wbBurnNote"></div></div>
+      <div class="card"><div class="eyebrow">Back-test · ₹ per acre, % of sum insured</div><h3>Claims by season, 2015–2026</h3><div class="tbl"><table id="wbYears"></table></div><div class="note" id="wbYearsNote"></div></div>
+    </div>
+  </section>
+
+  <!-- LIVE -->
   <section id="lv">
     <div class="card"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="livebadge">LIVE EVENT</span><span class="note" style="margin:0" id="lvGen"></span></div>
       <h3 style="margin-top:10px" id="lvTitle"></h3><p class="cap" id="lvCap"></p>
@@ -532,7 +557,7 @@ const rank = {PAY: 3, VER: 2, PEND: 1, NO: 0};
 const peril = t => (t || "").split("+").map(x => ({extreme_rain: "Heavy rain", unseasonal_rain: "Unseasonal rain", cyclone: "Cyclone"})[x] || x).join(" + ");
 const cyc = c => c ? "Cyclone " + c.split(":")[0].replace("UNNAMED", "(unnamed)") : "";
 const IMG = n => (D.img || {})[n] || "";
-const TITLES = {ov: "Overview", lv: "Live event: Cyclone Arnab", ev: "Disasters & relief (Lane 2)", se: "Drought seasons", tr: "Insurance product (Lane 1)", fp: "Farmer payouts (Lane 1)", cp: "Compensation workflow", al: "Farmer alerts", ph: "Photo verification", va: "Validation & limits"};
+const TITLES = {ov: "Overview", lv: "Live event: Cyclone Arnab", ev: "Disasters & relief (Lane 2)", se: "Drought seasons", wb: "Weather index insurance (WBCIS structure)", tr: "Hybrid option: weather + satellite (Lane 1)", fp: "Farmer payouts (Lane 1)", cp: "Compensation workflow", al: "Farmer alerts", ph: "Photo verification", va: "Validation & limits"};
 
 function go(t) {
   $$("#tabs button").forEach(x => x.classList.toggle("on", x.dataset.t === t));
@@ -557,7 +582,7 @@ const FS = D.farmer_summary || {};
 const kp = [
   [D.pilot.length, "pilot mandals, rule-selected"],
   [D.events.length, "disasters assessed, 2020–2026"],
-  [sOnly.fired != null ? `${sOnly.fired - sOnly.hits} → ${(sDual.fired || 0) - (sDual.hits || 0)}` : "–", "false season payouts, rainfall-only → dual trigger (real CCE, YSR)"],
+  [D.wbcis ? D.wbcis.covers.length + " × 4" : "–", "weather perils × crop stages, trigger and exit per mandal"],
   [FS.bookings ? fmt(FS.bookings) : "–", "e-Panta bookings priced on their own sowing date"],
   [pm.test_accuracy ? fmt(100 * pm.test_accuracy) + "%" : "–", "pest model accuracy (held-out) vs 47% zero-shot"],
 ];
@@ -1049,6 +1074,86 @@ if (CP0) {
     lt.classList.add("out");
     setTimeout(() => { i = (i + 1) % facts.length; lt.innerHTML = facts[i]; lt.classList.remove("out"); }, 400);
   }, 4200);
+})();
+// ---------- Weather index (WBCIS structure) ----------
+(function wbcis() {
+  const W = D.wbcis;
+  if (!W) { $("#wbKpi").innerHTML = '<span class="note">Run p28_wbcis_termsheet.py</span>'; return; }
+  const P = W.params, PH = ["initial", "development", "mid", "late"];
+  const PHN = {initial: "Initial (establishment)", development: "Development (tillering / vegetative)", mid: "Mid (flowering, grain / boll fill)", late: "Late (maturity)"};
+  const COV = W.covers.map(c => c.cover);
+  const ts = W.termsheet, det = W.detail.map(r => ({m: r[0], c: r[1], y: r[2], ph: r[3], cov: r[4], v: r[5], va: r[6], f: r[7], rs: r[8], st: r[9], s: r[10], e: r[11], src: r[12]}));
+  const mandals = [...new Set(ts.map(r => r.mandal))];
+  const burnAll = W.burn.map(b => b.burn_pct * 1);
+  $("#wbKpi").innerHTML = [
+    [COV.length, "perils: deficit, excess, dry spell, wind, disease-congenial, heat"],
+    [4, "FAO-56 crop stages, dated from e-Panta sowing"],
+    [mandals.length, "pilot mandals, " + new Set(ts.map(r => r.crop)).size + " crops"],
+    [`${fmt(Math.min(...burnAll), 1)}–${fmt(Math.max(...burnAll), 1)}%`, "pure premium (burn cost) of sum insured"],
+    [esc(P.data_to), "weather data up to"]].map(([v, t]) => `<div><div class="big">${v}</div><span>${t}</span></div>`).join("");
+  const unit = Object.fromEntries(W.covers.map(c => [c.cover, c]));
+  $("#wbExp").innerHTML = `<tr><th>Peril</th><th>Index (per stage)</th>${PH.map(p => `<th>${p}</th>`).join("")}</tr>` +
+    COV.map(c => `<tr><td><b>${esc(c)}</b></td><td class="note">${esc({
+      "deficit rainfall": "cumulative rain, mm (pays when low)", "excess rainfall": "maximum 3-day rain, mm", "dry spell": "longest run of days < 2.5 mm (IMD rainy day)",
+      "high wind": "maximum daily wind gust, km/h", "disease-congenial": `longest run of days with RH ≥ ${P.rh_dis}% and ${P.t_dis[0]}–${P.t_dis[1]} °C`,
+      "heat": `days with T max ≥ ${P.t_heat} °C`}[c])}</td>${PH.map(p => `<td>${(P.exposure[c] || []).includes(p) ? '<span class="tag PAY">insured</span>' : '<span class="note">–</span>'}</td>`).join("")}</tr>`).join("");
+  $("#wbDesign").innerHTML = [
+    `<b>Start and exit points</b> come from each mandal's own ${P.base[0]}–${P.base[1]} weather record for that peril in that stage: <b>trigger = 1-in-${P.trigger_rp}-year</b> level, <b>exit = 1-in-${P.exit_rp}-year</b> level. Between them the claim rises linearly, so each cover has a fixed ₹ per mm, per day or per km/h.`,
+    `<b>Sum insured</b> = AP SLTC scale of finance 2024-25: ${Object.entries(P.si_acre).map(([k, v]) => `${esc(k)} ₹${fmt(v)}`).join(", ")} per acre. Split equally across the six perils; within a peril, across its stages by crop water demand (FAO-56). The split is a parameter the Department sets.`,
+    `<b>Claim</b> = sum of all covers in all stages, capped at the sum insured. Generated automatically at the end of each stage; no claim form, no field visit.`,
+    `<b>Climate trend:</b> if a peril has a significant trend in the mandal's record (Mann–Kendall p < 0.05, mostly heat), the history is detrended to today's level (Theil–Sen) before setting trigger and exit, so a warming climate does not inflate payouts.`,
+    `<b>Day thresholds</b> (RH ${P.rh_dis}%, ${P.t_dis[0]}–${P.t_dis[1]} °C, ${P.t_heat} °C) are parameters for the Department / ANGRAU agromet cell to confirm; trigger and exit levels are measured, not chosen.`].map(x => `<li>${x}</li>`).join("");
+  $("#wbSrc").innerHTML = `<tr><th>Parameter</th><th>Back-test (30 years)</th><th>Live claim (proposed)</th></tr>` + [
+    ["Rainfall: deficit, excess, dry spell", "CHIRPS v2 daily, 0.05°, gauge-blended, mandal areal mean (UCSB / USGS)", "Reference Weather Station: DES RTGS rain gauge / AWS of the mandal"],
+    ["Wind gust", "ERA5 reanalysis (ECMWF), hourly → daily max", "RWS AWS anemometer; IMD AWS"],
+    ["Relative humidity, temperature", "ERA5 reanalysis (ECMWF), 2 m", "RWS AWS"],
+    ["Back-up", "ERA5 rain where CHIRPS is not yet published (flagged provisional)", "Back-up Weather Station (BWS) notified per unit; gridded data only if both fail"]].map(r => `<tr>${r.map(x => `<td>${esc(x)}</td>`).join("")}</tr>`).join("");
+  $("#wbSrcNote").innerHTML = `This run: rain ${esc(P.rain_source)}; ${esc(P.weather_source)}. The RWS / BWS rule follows the RWBCIS operational guidelines. AP's DES Real-Time Governance network (about 2,200 stations) and IMD AWS are the natural reference stations; I did not have their history, so the back-test uses gridded data.`;
+  const selM = $("#wbM"), selC = $("#wbC"), selY = $("#wbY");
+  selM.innerHTML = mandals.map(m => `<option>${esc(m)}</option>`).join("");
+  const fillC = () => { const cs = [...new Set(ts.filter(r => r.mandal === selM.value).map(r => r.crop))]; selC.innerHTML = cs.map(c => `<option>${esc(c)}</option>`).join(""); };
+  const fillY = () => { const ys = [...new Set(det.filter(r => r.m === selM.value && r.c === selC.value).map(r => r.y))].sort((a, b) => b - a); selY.innerHTML = ys.map(y => `<option>${y}</option>`).join(""); };
+  const fmtU = (c, v) => v == null ? "–" : fmt(v, unit[c].unit.startsWith("mm") || c === "high wind" ? 0 : 0);
+  function drawTs() {
+    const m = selM.value, c = selC.value, rows = ts.filter(r => r.mandal === m && r.crop === c);
+    const si = P.si_acre[c];
+    $("#wbTsTitle").textContent = `Term sheet · ${m} · ${c} · sum insured ₹${fmt(si)} per acre`;
+    const st = Object.fromEntries(PH.map(p => [p, rows.find(r => r.phase === p) || {}]));
+    $("#wbTsCap").innerHTML = "Stage dates (Kharif 2026 calendar): " + PH.map(p => `<b>${p}</b> ${esc(st[p].start_mmdd)}–${esc(st[p].end_mmdd)}`).join(" · ");
+    $("#wbTs").innerHTML = `<tr><th>Stage</th><th>Peril</th><th>Unit</th><th class="n">Trigger (start)</th><th class="n">Exit</th><th class="n">₹ per unit per acre</th><th class="n">Max ₹ / acre</th><th>Source</th></tr>` +
+      PH.flatMap(p => rows.filter(r => r.phase === p && r.offered).map(r => `<tr><td>${esc(p)}</td><td><b>${esc(r.cover)}</b>${r.trend ? ' <span class="note" title="significant trend: history detrended to 2026">trend-adjusted</span>' : ""}</td><td class="note">${esc(r.unit)}</td>
+        <td class="n">${r.worse_high ? "&gt; " : "&lt; "}${fmt(r.trigger, 1)}</td><td class="n">${r.worse_high ? "≥ " : "≤ "}${fmt(r.exit, 1)}</td><td class="n">${fmt(r.rate_rs_per_unit, 1)}</td><td class="n"><b>${fmt(r.max_rs_acre)}</b></td><td class="note">${esc(r.source)}</td></tr>`)).join("") +
+      `<tr><td colspan="6"><b>Total, capped at sum insured</b></td><td class="n"><b>${fmt(rows.filter(r => r.offered).reduce((a, r) => a + r.max_rs_acre, 0))}</b></td><td></td></tr>`;
+  }
+  function drawCl() {
+    const m = selM.value, c = selC.value, y = +selY.value, si = P.si_acre[c];
+    const rows = det.filter(r => r.m === m && r.c === c && r.y === y);
+    const T = Object.fromEntries(ts.filter(r => r.mandal === m && r.crop === c).map(r => [r.phase + "|" + r.cover, r]));
+    const tot = Math.min(si, rows.reduce((a, r) => a + r.rs, 0)), live = rows.some(r => r.st !== "complete");
+    $("#wbClTitle").textContent = `Claim · ${m} · ${c} · ${y === 2026 ? "Kharif 2026 (season to date)" : (rows[0] && new Date(rows[0].s).getMonth() >= 8 ? "Rabi " : "Kharif ") + y}`;
+    $("#wbClKpi").innerHTML = `<div><div class="big gt">₹${fmt(tot)}</div><span>claim per acre${live ? " so far (season running)" : ""}</span></div><div><div class="big">${fmt(100 * tot / si, 1)}%</div><span>of sum insured ₹${fmt(si)}</span></div><div><div class="big">${rows.filter(r => r.rs > 0).length}</div><span>covers triggered, of ${rows.filter(r => (T[r.ph + "|" + r.cov] || {}).offered).length}</span></div>`;
+    $("#wbCl").innerHTML = `<tr><th>Stage</th><th>Dates</th><th>Peril</th><th class="n">Observed</th><th class="n">Trigger → exit</th><th class="n">Claim ₹ / acre</th><th>Status</th></tr>` +
+      rows.filter(r => (T[r.ph + "|" + r.cov] || {}).offered).map(r => { const t = T[r.ph + "|" + r.cov];
+        return `<tr${r.rs > 0 ? ' style="background:rgba(52,211,153,.07)"' : ""}><td>${esc(r.ph)}</td><td class="note">${esc(r.s.slice(5))} → ${esc(r.e.slice(5))}</td><td><b>${esc(r.cov)}</b></td>
+        <td class="n">${r.v == null ? '<span class="note">at stage end</span>' : fmt(r.v, r.cov === "high wind" ? 1 : 0) + " " + esc(t.unit)}${r.va != null && Math.abs(r.va - r.v) > 0.05 && y !== 2026 ? ` <span class="note" title="detrended to 2026 climate">(${fmt(r.va, 1)} at 2026 level)</span>` : ""}</td>
+        <td class="n note">${fmt(t.trigger, 1)} → ${fmt(t.exit, 1)}</td><td class="n">${r.rs > 0 ? "<b>" + fmt(r.rs) + "</b>" : "0"}</td><td class="note">${esc(r.st)}${/ERA5/.test(r.src) && ["deficit rainfall", "excess rainfall", "dry spell"].includes(r.cov) ? " · rain ERA5 provisional" : ""}</td></tr>`; }).join("");
+    $("#wbClNote").innerHTML = `Claim per farmer = ₹ per acre × insured acres in e-Panta. Past seasons are scored at today's climate level where a trend was found (shown in brackets). ${y === 2026 ? "Kharif 2026 is running: deficit-rainfall covers are judged at the end of each stage; rain after " + esc((P.rain_source.match(/CHIRPS to (\S+)/) || [])[1] || "") + " is ERA5 provisional until CHIRPS / the RWS is final." : ""}`;
+  }
+  selM.onchange = () => { fillC(); fillY(); drawTs(); drawCl(); };
+  selC.onchange = () => { fillY(); drawTs(); drawCl(); };
+  selY.onchange = drawCl;
+  fillC(); fillY(); drawTs(); drawCl();
+  $("#wbBurn").innerHTML = `<tr><th>Mandal</th><th>Crop</th><th class="n">Burn cost % SI</th><th class="n">₹ / acre / year</th><th class="n">Seasons with a claim</th></tr>` +
+    W.burn.map(b => `<tr><td>${esc(b.mandal)}</td><td>${esc(b.crop)}</td><td class="n"><b>${fmt(b.burn_pct, 1)}%</b></td><td class="n">${fmt(b.burn_rs)}</td><td class="n">${fmt(100 * b.freq)}%</td></tr>`).join("");
+  const di = W.dist || {}, ba = W.basis || {};
+  $("#wbBurnNote").innerHTML = `Pure premium before the insurer's loading. Many small claims, few large ones: the median season pays ${fmt(di["50%"], 1)}% of sum insured, ${fmt(100 * (di.share_ge25 || 0))}% of seasons pay 25% or more, the largest ${fmt(di.max, 1)}%.` +
+    (ba.n ? ` <b>Basis-risk check only, not part of the claim:</b> in the two YSR pilot mandals, the index paid on average ${fmt(ba.mean_claim_pct_loss, 1)}% of sum insured in seasons the Department's crop-cutting yields show a loss, and ${fmt(ba.mean_claim_pct_noloss, 1)}% in seasons with none (rank correlation ${fmt(ba.spearman, 2)}, ${ba.n} mandal-crop-seasons).` : "");
+  const yrs = W.years.filter(r => r.year >= 2015), ys = [...new Set(yrs.map(r => r.year))].sort();
+  const key = r => r.mandal + " · " + r.crop;
+  $("#wbYears").innerHTML = `<tr><th>Mandal · crop</th>${ys.map(y => `<th class="n">${y === 2026 ? "2026*" : y}</th>`).join("")}</tr>` +
+    [...new Set(yrs.map(key))].map(k => `<tr><td class="note">${esc(k)}</td>${ys.map(y => { const r = yrs.find(x => key(x) === k && x.year === y);
+      return `<td class="n" title="${r ? esc(r.main_cover || "") + " · ₹" + fmt(r.claim) + "/acre" : ""}" style="${r && r.pct >= 25 ? "color:var(--good);font-weight:700" : r && r.pct >= 10 ? "font-weight:600" : "opacity:.7"}">${r ? fmt(r.pct) : "–"}</td>`; }).join("")}</tr>`).join("");
+  $("#wbYearsNote").innerHTML = "% of sum insured; hover for the main peril and ₹ per acre. *2026 is season to date. Click a mandal above and pick a year to see each cover.";
 })();
 </script>
 </body>

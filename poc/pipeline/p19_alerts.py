@@ -78,14 +78,11 @@ if lf.exists():
         crops = crops_of[r.district_code]
         crops_en, crops_te = ", ".join(crops), ", ".join(CROP_TE.get(c, c) for c in crops)
         m_te = te_all.get(r.adm3_id, r.adm3_name)
-        if str(r.lane1_decision).startswith("INDEX PAYOUT"):
-            ins_en = f" Insurance: index triggered, {r.lane1_payout_pct:.0f}% of sum insured (final when ERA5 rainfall is published)."
-            ins_te = f" బీమా: సూచిక ప్రేరేపించబడింది, బీమా మొత్తంలో {r.lane1_payout_pct:.0f}% (ERA5 వర్షపాత సమాచారం వచ్చాక తుది నిర్ణయం)."
-        elif r.lane1_decision == "AWAITING RADAR":
-            ins_en, ins_te = " Insurance: index decision waits for the next satellite radar pass.", " బీమా: సూచిక నిర్ణయం తదుపరి ఉపగ్రహ రాడార్ చిత్రం కోసం వేచి ఉంది."
-        else:
-            ins_en = " Insurance: index not triggered so far (radar showed no flood water on crops). Relief enumeration is separate and open."
-            ins_te = " బీమా: సూచిక ఇప్పటివరకు ప్రేరేపించబడలేదు (రాడార్‌లో పంటలపై ముంపు నీరు కనిపించలేదు). విపత్తు సహాయ నష్ట గణన వేరుగా కొనసాగుతుంది."
+        # Insurance is the weather index (p28): claimed automatically at each crop-stage end; no photo or visit needed.
+        ins_en = (" Insurance: the weather-index claim is calculated automatically from rain, wind, humidity and temperature"
+                  " at the end of each crop stage; no photo or field visit is needed. Relief enumeration is separate.")
+        ins_te = (" బీమా: వాతావరణ సూచిక పరిహారం ప్రతి పంట దశ చివర వర్షం, గాలి, తేమ, ఉష్ణోగ్రత ఆధారంగా స్వయంచాలకంగా"
+                  " లెక్కించబడుతుంది; ఫోటో లేదా క్షేత్ర పరిశీలన అవసరం లేదు. విపత్తు సహాయ నష్ట గణన వేరుగా కొనసాగుతుంది.")
         en = (f"{r.adm3_name} mandal: {E['name']} brought heavy rain ({r.index_mm:.0f} mm in 3 days, provisional). Disaster relief "
               f"(input subsidy) damage enumeration is open for {crops_en}. Upload a photo of your field with location switched on, "
               f"or meet the agriculture officer at the field visit. Drain standing water; watch paddy for bacterial leaf blight, "
